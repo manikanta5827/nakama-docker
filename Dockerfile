@@ -8,7 +8,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM registry.heroiclabs.com/heroiclabs/nakama:3.22.0
+FROM registry.heroiclabs.com/heroiclabs/nakama:3.38.0
 
-COPY --from=node-builder /backend/build/*.js /nakama/data/modules/build/
+COPY --from=node-builder /backend/build/*.js /nakama/data/modules/
 COPY local.yml /nakama/data/

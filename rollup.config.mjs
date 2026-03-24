@@ -20,6 +20,6 @@ export default {
     }),
   ],
   output: {
-    file: 'build/index.js',
+    file: 'modules/index.js',
   },
 };

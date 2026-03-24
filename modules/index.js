@@ -1,3 +1,12 @@
+function rpcHealthCheck(ctx, logger, nk, payload) {
+  logger.info("Health check RPC called!");
+  return JSON.stringify({
+    success: true,
+    message: "Nakama server is alive!",
+    timestamp: Date.now()
+  });
+}
+
 function InitModule(ctx, logger, nk, initializer) {
   try {
     initializer.registerRpc("healthcheck", rpcHealthCheck);

@@ -1,6 +1,9 @@
 // This is Nakama's entry point — like index.js in Express
 // Nakama looks for "InitModule" by name at startup
 
+import { rpcHealthCheck } from './healthcheck';
+
+
 function InitModule(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,

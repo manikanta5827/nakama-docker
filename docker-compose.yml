@@ -18,6 +18,7 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
+
   nakama:
     container_name: nakama
     image: registry.heroiclabs.com/heroiclabs/nakama:3.38.0
@@ -26,7 +27,12 @@ services:
       - "-ecx"
       - >
           /nakama/nakama migrate up --database.address postgres:localdb@postgres:5432/nakama &&
-          exec /nakama/nakama --name nakama1 --database.address postgres:localdb@postgres:5432/nakama --logger.level DEBUG --session.token_expiry_sec 7200
+          exec /nakama/nakama
+          --name nakama1
+          --config /nakama/data/local.yml
+          --database.address postgres:localdb@postgres:5432/nakama
+          --logger.level DEBUG
+          --session.token_expiry_sec 7200
     restart: always
     links:
       - "postgres:db"
@@ -48,5 +54,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
 volumes:
   data:

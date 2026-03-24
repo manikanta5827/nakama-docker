@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+ "scripts": {
   "build": "rollup -c rollup.config.mjs",
-  "type-check": "tsc --noEmit"
+  "type-check": "tsc --noEmit",
+  "docker:up": "docker compose up",
+  "docker:down": "docker compose down",
+  "docker:restart": "docker compose restart nakama"
 },
   "keywords": [],
   "author": "",
