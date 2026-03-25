@@ -1,8 +1,6 @@
-// This is Nakama's entry point — like index.js in Express
-// Nakama looks for "InitModule" by name at startup
-
 import { rpcHealthCheck } from './healthcheck';
-
+import { rpcSaveStats, rpcGetStats } from './storage';
+import { rpcCreateMatch, matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate } from './match';
 
 function InitModule(
   ctx: nkruntime.Context,
@@ -11,17 +9,39 @@ function InitModule(
   initializer: nkruntime.Initializer
 ): void {
 
-  // Register your RPC — like app.get('/healthcheck', handler)
   try {
     initializer.registerRpc("healthcheck", rpcHealthCheck);
-    logger.info("healthcheck RPC registered successfully");
+    logger.info("healthcheck RPC registered");
   } catch (error) {
-    logger.error("Failed to register healthcheck RPC: %s", error.message);
+    logger.error("Failed: %s", error.message);
+  }
+
+  try {
+    initializer.registerRpc("save_stats", rpcSaveStats);
+    initializer.registerRpc("get_stats", rpcGetStats);
+    logger.info("storage RPCs registered");
+  } catch (error) {
+    logger.error("Failed: %s", error.message);
+  }
+
+  try {
+    // Register the match handler — ALL 7 functions in one call
+    initializer.registerMatch('tictactoe', {
+      matchInit,
+      matchJoinAttempt,
+      matchJoin,
+      matchLoop,
+      matchLeave,
+      matchTerminate,
+      matchSignal,
+    });
+    initializer.registerRpc("create_match", rpcCreateMatch);
+    logger.info("match handler registered");
+  } catch (error) {
+    logger.error("Failed: %s", error.message);
   }
 
   logger.info("=== Game server loaded successfully ===");
 }
 
-// IMPORTANT: This line stops Rollup from removing InitModule during build
-// Rollup tree-shakes unused code — this tells it "no, keep this function"
 !InitModule && InitModule.bind(null);
