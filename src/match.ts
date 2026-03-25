@@ -3,7 +3,10 @@ import {
   OPCODE_GAME_STATE,
   OPCODE_GAME_OVER,
   OPCODE_START,
-  MODULE_NAME
+  MODULE_NAME,
+  OPCODE_DRAW,
+  OPCODE_SERVER_SHUTDOWN,
+  OPCODE_PARTNER_LEFT
 } from './constants';
 
 // =====================
@@ -213,7 +216,7 @@ export function matchLoop(
       state.gameOver = true;
 
       dispatcher.broadcastMessage(
-        OPCODE_GAME_OVER,
+        OPCODE_DRAW,
         JSON.stringify({
           board: state.board,
           winner: null,
@@ -296,6 +299,14 @@ export function matchLeave(
   // If a player left mid-game, end the match
   if (Object.keys(state.players).length < 2 && !state.gameOver) {
     logger.info("Player disconnected — ending match");
+
+    // tell remaining player before ending
+    dispatcher.broadcastMessage(
+      OPCODE_PARTNER_LEFT,
+      JSON.stringify({ reason: "partner_left" }),
+      null,
+      null
+    );
     return null; // returning null ends the match
   }
 
@@ -319,7 +330,7 @@ export function matchTerminate(
   logger.info("Match terminating — grace period: %d seconds", graceSeconds);
 
   dispatcher.broadcastMessage(
-    OPCODE_GAME_OVER,
+    OPCODE_SERVER_SHUTDOWN,
     JSON.stringify({ reason: "Server shutting down" }),
     null,
     null

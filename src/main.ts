@@ -1,6 +1,7 @@
 import { rpcHealthCheck } from './healthcheck';
 import { rpcSaveStats, rpcGetStats } from './storage';
 import { rpcCreateMatch, matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate } from './match';
+import { MODULE_NAME } from './constants';
 
 function InitModule(
   ctx: nkruntime.Context,
@@ -26,7 +27,7 @@ function InitModule(
 
   try {
     // Register the match handler — ALL 7 functions in one call
-    initializer.registerMatch('tictactoe', {
+    initializer.registerMatch(MODULE_NAME, {
       matchInit,
       matchJoinAttempt,
       matchJoin,
