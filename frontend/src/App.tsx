@@ -1,9 +1,34 @@
 import { useState, useEffect, useCallback } from "react";
 import { Client, Session, type Socket } from "@heroiclabs/nakama-js";
-import { OPCODE_MOVE, OPCODE_GAME_STATE, OPCODE_GAME_OVER, OPCODE_START, OPCODE_DRAW, OPCODE_PARTNER_LEFT, OPCODE_SERVER_SHUTDOWN, NAKAMA_HOST, NAKAMA_PORT, NAKAMA_SERVER_KEY } from "./constants";
-import { type Board, type Summary, type MatchRecord } from "./types";
-import { resultColor, resultIcon, reasonLabel, timeAgo } from "./lib/helper";
-import { styles } from "./lib/styles";
+import { 
+  OPCODE_MOVE, 
+  OPCODE_GAME_STATE, 
+  OPCODE_GAME_OVER, 
+  OPCODE_START, 
+  OPCODE_DRAW, 
+  OPCODE_PARTNER_LEFT, 
+  OPCODE_SERVER_SHUTDOWN, 
+  NAKAMA_HOST, 
+  NAKAMA_PORT, 
+  NAKAMA_SERVER_KEY 
+} from "@/constants";
+import { type Board, type Summary, type MatchRecord } from "@/types";
+import { resultColor, resultIcon, reasonLabel, timeAgo } from "@/lib/helper";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { 
+  Trophy, 
+  Skull, 
+  Handshake, 
+  Pencil, 
+  Clock, 
+  BarChart2, 
+  RefreshCw,
+  LogOut,
+  Hash
+} from "lucide-react";
 
 // ── Main Component ─────────────────────────────────────────
 export default function App() {
@@ -28,7 +53,6 @@ export default function App() {
       const newClient = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT);
       setClient(newClient);
 
-      // Stable device ID using proper UUID
       let deviceId = localStorage.getItem("nakama_device_id");
       if (!deviceId) {
         deviceId = crypto.randomUUID();
@@ -39,12 +63,10 @@ export default function App() {
         const newSession = await newClient.authenticateDevice(deviceId, true);
         setSession(newSession);
 
-        // Store the real Nakama UUID — this is what shows in dashboard
         if (newSession.user_id) {
           localStorage.setItem("nakama_user_id", newSession.user_id);
         }
 
-        // Ask for display name once — save it forever
         let name = localStorage.getItem("nakama_display_name");
         if (!name) {
           const userId = newSession.user_id ? newSession.user_id.substring(0, 5) : "guest";
@@ -56,7 +78,6 @@ export default function App() {
         }
         setDisplayName(name);
 
-        // Push display name into Nakama profile — shows in dashboard
         await newClient.updateAccount(newSession, { display_name: name });
 
         const newSocket = newClient.createSocket();
@@ -64,7 +85,6 @@ export default function App() {
         setSocket(newSocket);
         setStatus("Ready to play");
 
-        // Load stats right after connecting
         await fetchStats(newClient, newSession);
 
       } catch (e) {
@@ -76,7 +96,6 @@ export default function App() {
     init();
   }, []);
 
-  // ── Fetch Stats from Server ──────────────────────────────
   const fetchStats = async (c?: Client, s?: Session) => {
     const activeClient  = c || client;
     const activeSession = s || session;
@@ -87,8 +106,6 @@ export default function App() {
       const res = await activeClient.rpc(activeSession, "get_stats", {});
       let payload: { summary?: Summary; matchHistory?: MatchRecord[] } | null = null;
 
-      console.log("RPC response payload:", res.payload);
-      
       if (typeof res.payload === "string") {
         payload = JSON.parse(res.payload);
       } else {
@@ -106,17 +123,14 @@ export default function App() {
     }
   };
 
-  // ── Handle All Incoming Match Opcodes ───────────────────
   useEffect(() => {
     if (!socket || !session) return;
 
     socket.onmatchdata = (matchData) => {
       const opCode = matchData.op_code;
       const data   = JSON.parse(new TextDecoder().decode(matchData.data));
-      console.log("Opcode:", opCode, "Data:", data);
 
       switch (opCode) {
-
         case OPCODE_START:
           setBoard(data.board);
           setMySymbol(session.user_id ? data.playerSymbols[session.user_id] : null);
@@ -133,7 +147,6 @@ export default function App() {
           setBoard(data.board);
           setWinner(data.winnerSymbol);
           setStatus("Game Over");
-          // Refresh stats after match ends
           setTimeout(() => fetchStats(), 500);
           break;
 
@@ -157,7 +170,6 @@ export default function App() {
     };
   }, [socket, session, mySymbol]);
 
-  // ── Match Actions ────────────────────────────────────────
   const joinMatchById = async (id: string) => {
     if (!id || !socket) return;
     try {
@@ -204,41 +216,43 @@ export default function App() {
 
   const isMyTurn = currentTurn === session?.user_id;
 
-  // ── Render ───────────────────────────────────────────────
   return (
-    <div style={styles.root} className="app-root">
+    <div className="flex flex-col md:flex-row h-[100dvh] bg-background text-foreground font-sans dark overflow-hidden">
 
       {/* ── Left Panel: Game ── */}
-      <div style={styles.gamePanel} className="game-panel">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 border-b md:border-b-0 md:border-r border-border overflow-y-auto min-h-0">
 
         {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.logo}>✕ ○</div>
-          <div>
+        <div className="flex items-center gap-6 mb-10 shrink-0">
+          <div className="text-5xl font-black tracking-tighter text-primary select-none drop-shadow-sm">✕○</div>
+          <div className="flex flex-col">
             {displayName && (
-              <div style={styles.playerName}>{displayName}</div>
+              <div className="text-lg font-bold tracking-tight mb-0.5">{displayName}</div>
             )}
-            <div style={styles.statusBadge}>{status}</div>
+            <Badge variant="secondary" className="w-fit text-[10px] uppercase tracking-wider font-bold opacity-80">
+              {status}
+            </Badge>
           </div>
         </div>
 
         {/* Match ID display */}
         {matchId && (
-          <div style={styles.matchIdBox}>
-            <span style={styles.matchIdLabel}>MATCH ID</span>
-            <span style={styles.matchIdValue}>{matchId}</span>
+          <div className="flex flex-col items-center gap-1.5 mb-8 p-4 bg-muted/40 rounded-xl border border-border max-w-sm w-full shrink-0">
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-muted-foreground uppercase font-bold">
+              <Hash className="size-3" /> Match ID
+            </div>
+            <span className="text-xs text-primary font-mono font-medium uppercase tracking-wider break-all text-center">{matchId}</span>
           </div>
         )}
 
         {/* Symbol display */}
         {mySymbol && (
-          <div style={styles.symbolBox}>
-            You are{" "}
-            <span style={{
-              color: mySymbol === "X" ? "#60a5fa" : "#f87171",
-              fontWeight: 800,
-              fontSize: 22
-            }}>
+          <div className="flex items-center gap-2 text-sm mb-8 text-muted-foreground shrink-0">
+            <span>You are playing as</span>
+            <span className={cn(
+              "font-black text-2xl",
+              mySymbol === "X" ? "text-blue-500" : "text-red-500"
+            )}>
               {mySymbol}
             </span>
           </div>
@@ -246,43 +260,44 @@ export default function App() {
 
         {/* Lobby Buttons */}
         {!matchId && (
-          <div style={styles.lobbyButtons}>
-            <button style={styles.btnPrimary} onClick={createMatch}>
+          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs sm:max-w-none sm:justify-center shrink-0">
+            <Button 
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-widest h-14 px-10 shadow-lg" 
+              onClick={createMatch}
+            >
               Create Match
-            </button>
-            <button style={styles.btnSecondary} onClick={joinMatch}>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg"
+              className="border-primary text-primary hover:bg-primary/10 font-bold uppercase tracking-widest h-14 px-10" 
+              onClick={joinMatch}
+            >
               Join Match
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Board */}
         {matchId && (
           <>
-            <div style={styles.board} className="board">
+            <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-2xl border border-border shadow-inner shrink-0">
               {board.map((cell, i) => (
                 <button
                   key={i}
-                  style={{
-                    ...styles.cell,
-                    cursor: (!cell && isMyTurn && !winner && !isDraw)
-                      ? "pointer" : "default",
-                    background: cell
-                      ? "rgba(255,255,255,0.06)"
-                      : isMyTurn && !winner && !isDraw
-                        ? "rgba(255,255,255,0.04)"
-                        : "rgba(255,255,255,0.02)",
-                  }}
+                  className={cn(
+                    "w-20 h-20 sm:w-28 sm:h-28 border border-border rounded-xl flex items-center justify-center transition-all duration-200",
+                    cell ? "bg-muted/50" : isMyTurn && !winner && !isDraw ? "bg-background hover:bg-muted cursor-pointer active:scale-95 hover:shadow-md" : "bg-muted/20 cursor-default"
+                  )}
                   onClick={() => makeMove(i)}
                   disabled={!!cell || !isMyTurn || !!winner || isDraw}
                 >
                   {cell && (
-                    <span style={{
-                      color: cell === "X" ? "#60a5fa" : "#f87171",
-                      fontSize: 40,
-                      fontWeight: 900,
-                      lineHeight: 1
-                    }}>
+                    <span className={cn(
+                      "text-4xl sm:text-5xl font-black leading-none select-none drop-shadow-sm animate-in zoom-in-50 duration-200",
+                      cell === "X" ? "text-blue-500" : "text-red-500"
+                    )}>
                       {cell}
                     </span>
                   )}
@@ -291,97 +306,118 @@ export default function App() {
             </div>
 
             {/* Turn status */}
-            <div style={styles.turnStatus}>
+            <div className="mt-10 text-xl font-bold min-h-[40px] flex items-center justify-center shrink-0">
               {winner ? (
-                <span style={{ color: "#4ade80" }}>🏆 {winner} Wins!</span>
+                <div className="flex items-center gap-2 text-green-500 animate-bounce">
+                  <Trophy className="size-6" />
+                  <span>{winner} Wins!</span>
+                </div>
               ) : isDraw ? (
-                <span style={{ color: "#facc15" }}>🤝 It's a Draw!</span>
+                <div className="flex items-center gap-2 text-yellow-500">
+                  <Handshake className="size-6" />
+                  <span>It's a Draw!</span>
+                </div>
               ) : isMyTurn ? (
-                <span style={{ color: "#a78bfa", animation: "pulse 1.5s infinite" }}>
-                  ✏️ Your Turn
-                </span>
+                <div className="flex items-center gap-2 text-primary animate-pulse">
+                  <Pencil className="size-5" />
+                  <span>Your Turn</span>
+                </div>
               ) : (
-                <span style={{ color: "#6b7280" }}>⏳ Opponent's Turn...</span>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="size-5 animate-spin-slow" />
+                  <span>Opponent's Turn...</span>
+                </div>
               )}
             </div>
 
-            <button style={styles.btnGhost} onClick={leaveGame}>
+            <Button 
+              variant="ghost" 
+              className="mt-10 text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0" 
+              onClick={leaveGame}
+            >
+              <LogOut className="mr-2 size-4" />
               Leave Game
-            </button>
+            </Button>
           </>
         )}
       </div>
 
       {/* ── Right Panel: Stats ── */}
-      <div style={styles.statsPanel} className="stats-panel">
+      <div className="w-full md:w-[380px] h-[40dvh] md:h-full flex flex-col p-6 md:p-8 bg-muted/10 overflow-y-auto border-l border-border shrink-0">
 
-        <div style={styles.statsHeader}>
-          <span>📊 Your Stats</span>
-          <button
-            style={styles.refreshBtn}
+        <div className="flex justify-between items-center mb-8 shrink-0">
+          <div className="flex items-center gap-2 text-base font-bold tracking-tight uppercase">
+            <BarChart2 className="size-5 text-primary" />
+            <span>Your Stats</span>
+          </div>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="rounded-full size-8 hover:bg-background"
             onClick={() => fetchStats()}
             disabled={loadingStats}
           >
-            {loadingStats ? "..." : "↻"}
-          </button>
+            <RefreshCw className={cn("size-3.5", loadingStats && "animate-spin")} />
+          </Button>
         </div>
 
         {/* Summary Cards */}
-        <div style={styles.summaryRow}>
-          <div style={{ ...styles.summaryCard, borderColor: "#4ade80" }}>
-            <div style={{ ...styles.summaryNum, color: "#4ade80" }}>{summary?.wins ?? 0}</div>
-            <div style={styles.summaryLabel}>Wins</div>
+        <div className="grid grid-cols-3 gap-3 mb-10 shrink-0">
+          <div className="flex flex-col p-4 bg-background rounded-xl border border-green-500/20 text-center shadow-sm">
+            <span className="text-2xl font-black text-green-500">{summary?.wins ?? 0}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-bold">Wins</span>
           </div>
-          <div style={{ ...styles.summaryCard, borderColor: "#f87171" }}>
-            <div style={{ ...styles.summaryNum, color: "#f87171" }}>{summary?.losses ?? 0}</div>
-            <div style={styles.summaryLabel}>Losses</div>
+          <div className="flex flex-col p-4 bg-background rounded-xl border border-red-500/20 text-center shadow-sm">
+            <span className="text-2xl font-black text-red-500">{summary?.losses ?? 0}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-bold">Losses</span>
           </div>
-          <div style={{ ...styles.summaryCard, borderColor: "#facc15" }}>
-            <div style={{ ...styles.summaryNum, color: "#facc15" }}>{summary?.draws ?? 0}</div>
-            <div style={styles.summaryLabel}>Draws</div>
+          <div className="flex flex-col p-4 bg-background rounded-xl border border-yellow-500/20 text-center shadow-sm">
+            <span className="text-2xl font-black text-yellow-500">{summary?.draws ?? 0}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-bold">Draws</span>
           </div>
         </div>
 
         {/* Match History List */}
-        <div style={styles.historyLabel}>Recent Matches</div>
+        <div className="text-[10px] tracking-[0.2em] text-muted-foreground uppercase mb-4 font-bold px-1 shrink-0">Recent Matches</div>
 
-        <div style={styles.historyList} className="history-list">
+        <div className="flex flex-col gap-3">
           {matchHistory.length === 0 && (
-            <div style={styles.emptyHistory}>
-              No matches yet — go play! 🎮
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground text-sm text-center italic opacity-60">
+              <Pencil className="size-8 mb-2 opacity-20" />
+              <span>No matches yet — go play!</span>
             </div>
           )}
 
           {matchHistory.map((match, i) => (
-            <div key={i} style={{
-              ...styles.historyRow,
-              borderLeft: `3px solid ${resultColor(match.result)}`
-            }}>
-              <div style={styles.historyLeft}>
-                <span style={styles.historyIcon}>
-                  {resultIcon(match.result)}
-                </span>
-                <div>
-                  <div style={{
-                    ...styles.historyResult,
-                    color: resultColor(match.result)
-                  }}>
-                    {match.result.toUpperCase()}
-                    {match.reason && (
-                      <span style={styles.historyReason}>
-                        {" "}· {reasonLabel(match.reason)}
-                      </span>
-                    )}
+            <Card key={i} className="overflow-hidden border-none bg-background/50 hover:bg-background transition-colors shrink-0">
+              <div className="flex justify-between items-start p-3.5 border-l-4" style={{ borderLeftColor: resultColor(match.result) }}>
+                <div className="flex gap-3.5">
+                  <div className="flex items-center justify-center size-9 rounded-full bg-muted/40 shrink-0 mt-0.5">
+                    <span className="text-lg">
+                      {resultIcon(match.result)}
+                    </span>
                   </div>
-                  <div style={styles.historyOpponent}>
-                    vs {match.opponent.substring(0, 8)}...
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                      <span className="text-sm font-bold tracking-tight uppercase" style={{ color: resultColor(match.result) }}>
+                        {match.result}
+                      </span>
+                      {match.reason && (
+                        <span className="text-[9px] font-bold text-muted-foreground px-1.5 py-0.5 bg-muted/80 rounded uppercase tracking-tighter">
+                          {reasonLabel(match.reason)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-medium opacity-70 truncate">
+                      vs {match.opponent.substring(0, 16)}...
+                    </div>
                   </div>
                 </div>
+                <div className="text-[10px] text-muted-foreground/50 font-bold tabular-nums shrink-0 ml-2 mt-1 uppercase tracking-tighter">
+                  {timeAgo(match.timestamp)}
+                </div>
               </div>
-              <div style={styles.historyTime}>
-                {timeAgo(match.timestamp)}
-              </div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>

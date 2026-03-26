@@ -111,7 +111,7 @@
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.488 0.243 264.376);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent: oklch(0.269 0.005 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
@@ -127,47 +127,4 @@
   html {
     @apply font-sans;
     }
-}
-
-/* Mobile-friendly layout for App */
-.app-root {
-  display: flex;
-  flex-direction: row;
-}
-
-@media (max-width: 900px) {
-  .app-root {
-    flex-direction: column;
-    padding: 10px !important;
-  }
-
-  .game-panel,
-  .stats-panel {
-    width: 100% !important;
-    border-right: none !important;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    box-shadow: none !important;
-    padding: 16px !important;
-    margin: 0 !important;
-  }
-
-  .board {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px !important;
-  }
-
-  .history-list {
-    max-height: 240px !important;
-  }
-
-  .btnPrimary,
-  .btnSecondary,
-  .btnGhost {
-    width: 100% !important;
-    text-align: center;
-  }
-  .statusBadge {
-    font-size: 12px !important;
-  }
 }
