@@ -10,5 +10,6 @@ RUN npm run build
 
 FROM registry.heroiclabs.com/heroiclabs/nakama:3.38.0
 
-COPY --from=node-builder /backend/build/*.js /nakama/data/modules/
+# rollup outputs to modules/index.js in repository
+COPY --from=node-builder /backend/modules/*.js /nakama/data/modules/
 COPY local.yml /nakama/data/
