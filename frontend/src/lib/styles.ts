@@ -220,7 +220,11 @@ export const styles: Record<string, React.CSSProperties> = {
     flexDirection:   "column",
     gap:             8,
     overflowY:       "auto",
-    maxHeight:       "calc(100vh - 280px)",
+    maxHeight:       "38vh",
+    minHeight:       "180px",
+    paddingRight:    4,
+    borderRadius:    8,
+    boxShadow:       "inset 0 0 0 1px rgba(255,255,255,0.08)",
   },
 
   emptyHistory: {
