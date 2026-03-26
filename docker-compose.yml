@@ -21,7 +21,10 @@ services:
 
   nakama:
     container_name: nakama
-    image: registry.heroiclabs.com/heroiclabs/nakama:3.38.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nakama-local
     entrypoint:
       - "/bin/sh"
       - "-ecx"
@@ -33,18 +36,9 @@ services:
           --database.address postgres:localdb@postgres:5432/nakama
           --logger.level DEBUG
           --session.token_expiry_sec 7200
-    restart: always
-    links:
-      - "postgres:db"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./:/nakama/data
-    expose:
-      - "7349"
-      - "7350"
-      - "7351"
     ports:
       - "7349:7349"
       - "7350:7350"
