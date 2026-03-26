@@ -48,7 +48,10 @@ export default function App() {
         let name = localStorage.getItem("nakama_display_name");
         if (!name) {
           const userId = newSession.user_id ? newSession.user_id.substring(0, 5) : "guest";
+          const emojis = ["🤖", "👾", "🦄", "🐉", "👻", "🎃"];
           name = prompt("Welcome! Enter your display name:") || "Player_" + userId;
+          name = emojis[Math.floor(Math.random() * emojis.length)] + " " + name;
+
           localStorage.setItem("nakama_display_name", name);
         }
         setDisplayName(name);
@@ -203,17 +206,17 @@ export default function App() {
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div style={styles.root}>
+    <div style={styles.root} className="app-root">
 
       {/* ── Left Panel: Game ── */}
-      <div style={styles.gamePanel}>
+      <div style={styles.gamePanel} className="game-panel">
 
         {/* Header */}
         <div style={styles.header}>
           <div style={styles.logo}>✕ ○</div>
           <div>
             {displayName && (
-              <div style={styles.playerName}>👤 {displayName}</div>
+              <div style={styles.playerName}>{displayName}</div>
             )}
             <div style={styles.statusBadge}>{status}</div>
           </div>
@@ -256,7 +259,7 @@ export default function App() {
         {/* Board */}
         {matchId && (
           <>
-            <div style={styles.board}>
+            <div style={styles.board} className="board">
               {board.map((cell, i) => (
                 <button
                   key={i}
@@ -310,7 +313,7 @@ export default function App() {
       </div>
 
       {/* ── Right Panel: Stats ── */}
-      <div style={styles.statsPanel}>
+      <div style={styles.statsPanel} className="stats-panel">
 
         <div style={styles.statsHeader}>
           <span>📊 Your Stats</span>
@@ -342,7 +345,7 @@ export default function App() {
         {/* Match History List */}
         <div style={styles.historyLabel}>Recent Matches</div>
 
-        <div style={styles.historyList}>
+        <div style={styles.historyList} className="history-list">
           {matchHistory.length === 0 && (
             <div style={styles.emptyHistory}>
               No matches yet — go play! 🎮
