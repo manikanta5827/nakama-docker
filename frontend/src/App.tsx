@@ -105,17 +105,29 @@ function App() {
     };
   }, [socket, session]);
 
+  const joinMatchById = async (id: string) => {
+    if (!id || !socket) return;
+    try {
+      await socket.joinMatch(id);
+      setMatchId(id);
+      setStatus("Joined match " + id);
+    } catch (e) {
+      console.error("Join Match Error:", e);
+      setStatus("Join Match Failed");
+    }
+  };
+
   const createMatch = async () => {
     if (!client || !session || !socket) return;
     try {
       const rpcResponse = await client.rpc(session, "create_match", {});
-      const payload = rpcResponse.payload;
-      if (typeof payload !== 'string') {
-        throw new Error('Invalid payload format');
+      const payload = rpcResponse.payload as { matchId: string };
+
+      if(!payload?.matchId) {
+        throw new Error('Match ID not found in RPC response');
       }
-      const { matchId: newMatchId } = JSON.parse(payload);
-      setMatchId(newMatchId);
-      await socket.joinMatch(newMatchId);
+      
+      await joinMatchById(payload?.matchId);
       setStatus("Waiting for opponent...");
     } catch (e) {
       console.error("Create Match Error:", e);
@@ -124,14 +136,8 @@ function App() {
 
   const joinMatch = async () => {
     const id = prompt("Enter Match ID:");
-    if (!id || !socket) return;
-    try {
-      await socket.joinMatch(id);
-      setMatchId(id);
-      setStatus("Joining match...");
-    } catch (e) {
-      console.error("Join Match Error:", e);
-    }
+    if (!id) return;
+    await joinMatchById(id);
   };
 
   const makeMove = useCallback(
