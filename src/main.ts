@@ -1,6 +1,5 @@
 import { rpcHealthCheck } from './healthcheck';
-import { rpcSaveStats, rpcGetStats } from './storage';
-import { rpcCreateMatch, matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate } from './match';
+import { rpcCreateMatch, matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate, rpcGetStats } from './match';
 import { MODULE_NAME } from './constants';
 
 function InitModule(
@@ -18,14 +17,6 @@ function InitModule(
   }
 
   try {
-    initializer.registerRpc("save_stats", rpcSaveStats);
-    initializer.registerRpc("get_stats", rpcGetStats);
-    logger.info("storage RPCs registered");
-  } catch (error) {
-    logger.error("Failed: %s", error.message);
-  }
-
-  try {
     // Register the match handler — ALL 7 functions in one call
     initializer.registerMatch(MODULE_NAME, {
       matchInit,
@@ -37,6 +28,8 @@ function InitModule(
       matchSignal,
     });
     initializer.registerRpc("create_match", rpcCreateMatch);
+    initializer.registerRpc("rpcGetStats", rpcGetStats);
+    
     logger.info("match handler registered");
   } catch (error) {
     logger.error("Failed: %s", error.message);

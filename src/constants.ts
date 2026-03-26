@@ -3,13 +3,18 @@
 
 export const OPCODE_MOVE = 1;
 export const OPCODE_GAME_STATE = 2;
-export const OPCODE_GAME_OVER = 3;      
+export const OPCODE_GAME_OVER = 3;
 export const OPCODE_START = 4;
-export const OPCODE_DRAW = 5;             
-export const OPCODE_PARTNER_LEFT = 6;     
-export const OPCODE_SERVER_SHUTDOWN = 7;  
+export const OPCODE_DRAW = 5;
+export const OPCODE_PARTNER_LEFT = 6;
+export const OPCODE_SERVER_SHUTDOWN = 7;
 
 export const MODULE_NAME = "tictactoe";
+
+// Win reasons — why did this result happen
+export const REASON_NORMAL = "normal";           // genuine face to face
+export const REASON_PARTNER_LEFT = "partner_left"; // opponent disconnected
+export const REASON_TIMEOUT = "timeout";          // opponent timed out
 
 // The match state shape — this is your "database" for one game session
 export interface MatchState {
