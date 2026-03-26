@@ -28,7 +28,7 @@ function InitModule(
       matchSignal,
     });
     initializer.registerRpc("create_match", rpcCreateMatch);
-    initializer.registerRpc("rpcGetStats", rpcGetStats);
+    initializer.registerRpc("get_stats", rpcGetStats);
     
     logger.info("match handler registered");
   } catch (error) {

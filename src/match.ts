@@ -29,78 +29,94 @@ function saveMatchResult(
   matchId: string
 ): void {
 
-  logger.info("Saving match result for players %s and %s — result: %s vs %s reason: %s", player1Id, player2Id, player1Result, player2Result, reason);
-  const timestamp = Date.now();
+  try {
+    logger.info("Saving match result for players %s and %s — result: %s vs %s reason: %s", player1Id, player2Id, player1Result, player2Result, reason);
+    const timestamp = Date.now();
 
-  const writeForPlayer = (
-    userId: string,
-    opponentId: string,
-    result: string
-  ) => {
+    const writeForPlayer = (
+      userId: string,
+      opponentId: string,
+      result: string
+    ) => {
 
-    // ── Step 1: Read existing summary ──
-    let summary = { wins: 0, losses: 0, draws: 0 };
+      // ── Step 1: Read existing summary ──
+      let summary = { wins: 0, losses: 0, draws: 0 };
 
-    try {
-      const existing = nk.storageRead([{
-        collection: "stats",
-        key: "summary",
-        userId: userId
-      }]);
+      try {
+        const existing = nk.storageRead([{
+          collection: "stats",
+          key: "summary",
+          userId: userId
+        }]);
 
-      if (existing && existing.length > 0) {
-        const rawValue = existing[0].value;
-        if (typeof rawValue === "string") {
-          summary = JSON.parse(rawValue);
-        } else if (rawValue && typeof rawValue === "object") {
-          summary = rawValue as { wins: number; losses: number; draws: number };
+        logger.info("Existing summary for %s: %o", userId, existing);
+
+        if (existing && existing.length > 0) {
+          const rawValue = existing[0].value;
+          if (typeof rawValue === "string") {
+            summary = JSON.parse(rawValue);
+          } else if (rawValue && typeof rawValue === "object") {
+            summary = rawValue as { wins: number; losses: number; draws: number };
+          }
         }
+
+        logger.info("Parsed summary for %s: %o", userId, summary);
+
+      } catch (e) {
+        logger.warn("No summary yet for %s — starting fresh", userId);
       }
-    } catch (e) {
-      logger.warn("No summary yet for %s — starting fresh", userId);
-    }
 
-    // ── Step 2: Update summary totals ──
-    if (result === "win") summary.wins += 1;
-    if (result === "loss") summary.losses += 1;
-    if (result === "draw") summary.draws += 1;
+      // ── Step 2: Update summary totals ──
+      if (result === "win") summary.wins += 1;
+      if (result === "loss") summary.losses += 1;
+      if (result === "draw") summary.draws += 1;
 
-    // ── Step 3: Write summary + per-match row in ONE call ──
-    nk.storageWrite([
-      {
-        // Summary row — always just 3 numbers, fast to read
-        collection: "stats",
-        key: "summary",
-        userId: userId,
-        value: summary,
-        permissionRead: 1,
-        permissionWrite: 0
-      },
-      {
-        // Per-match row — one row per match, keyed by matchId
-        // reason is only for win/loss — empty string for draw
-        collection: "stats",
-        key: "match_" + matchId,
-        userId: userId,
-        value: {
-          result,               // "win" | "loss" | "draw"
-          reason,               // "normal" | "partner_left" | "" (draw has no reason)
-          opponent: opponentId,
-          timestamp
-        },
-        permissionRead: 1,
-        permissionWrite: 0
+      // ── Step 3: Write summary + per-match row in ONE call ──
+      logger.info("Writing .... summary and match result for %s: summary=%o opponent=%s result=%s reason=%s", userId, summary, opponentId, result, reason);
+      try {
+        const res = nk.storageWrite([
+          {
+            // Summary row — always just 3 numbers, fast to read
+            collection: "stats",
+            key: "summary",
+            userId: userId,
+            value: JSON.stringify(summary) as any,
+            permissionRead: 1,
+            permissionWrite: 0
+          },
+          {
+            // Per-match row — one row per match, keyed by matchId
+            // reason is only for win/loss — empty string for draw
+            collection: "stats",
+            key: "match_" + matchId,
+            userId: userId,
+            value: JSON.stringify({
+              result,               // "win" | "loss" | "draw"
+              reason,               // "normal" | "partner_left" | "" (draw has no reason)
+              opponent: opponentId,
+              timestamp
+            }),
+            permissionRead: 1,
+            permissionWrite: 0
+          }
+        ]);
+
+        logger.info("Storage write result for %s: %o", userId, res);
+
+        logger.info(
+          "Stats saved for %s — result: %s reason: %s",
+          userId, result, reason
+        );
+      } catch (error) {
+        logger.error("Error writing storage for %s: %s", userId, JSON.stringify(error));
       }
-    ]);
+    };
 
-    logger.info(
-      "Stats saved for %s — result: %s reason: %s",
-      userId, result, reason
-    );
-  };
-
-  writeForPlayer(player1Id, player2Id, player1Result);
-  writeForPlayer(player2Id, player1Id, player2Result);
+    writeForPlayer(player1Id, player2Id, player1Result);
+    writeForPlayer(player2Id, player1Id, player2Result);
+  } catch (error) {
+    logger.error("Error saving match result: %s", JSON.stringify(error));
+  }
 }
 
 // =====================
@@ -123,12 +139,13 @@ export function matchInit(
     playerSymbols: {},            // no symbols assigned yet
     currentTurn: null,            // nobody's turn yet
     gameOver: false,
-    winner: null
+    winner: null,
+    matchId: ctx.matchId.split(".")[0]
   };
 
   return {
     state,
-    tickRate: 0.5,    // matchLoop runs 1 time per second (enough for Tic-Tac-Toe)
+    tickRate: 5,    // matchLoop runs 1 time per second (enough for Tic-Tac-Toe)
     label: "tictactoe"
   };
 }
@@ -198,10 +215,13 @@ export function matchJoin(
   const playerCount = Object.keys(state.players).length;
   if (playerCount === 2) {
     // First player (X) goes first
-    const playerIds = Object.keys(state.players);
-    state.currentTurn = playerIds[0]; // X always goes first
+    const xPlayerId = Object.keys(state.playerSymbols).find(function (id) {
+      return state.playerSymbols[id] === "X";
+    });
 
-    logger.info("Both players joined — game starting!");
+    state.currentTurn = xPlayerId || null;
+
+    logger.info("Both players joined — X player goes first: %s", state.currentTurn);
 
     // Tell both players the game is starting
     // broadcastMessage(opcode, data, presences=null means everyone)
@@ -235,133 +255,144 @@ export function matchLoop(
   messages: nkruntime.MatchMessage[]
 ): { state: nkruntime.MatchState } | null {
 
-  logger.info("matchLoop tick — gameOver: %s, messages: %d", 
-  state.gameOver, messages.length);
-
-  // If game is over, return null to END the match
   if (state.gameOver) {
-    logger.info("Game over — ending match");
+    logger.info("[matchLoop] game over => return null state.matchId=%s", state.matchId);
     return null;
+  }
+
+  if (!state.matchId) {
+    logger.warn("[matchLoop] missing state.matchId - maybe not set in matchInit");
   }
 
   // Process each message that came in since last tick
   messages.forEach(function (message) {
-    const senderId = message.sender.userId;
+    try {
+      const senderId = message.sender.userId;
 
-    // Only process MOVE opcodes
-    if (message.opCode !== OPCODE_MOVE) return;
+      // Only process MOVE opcodes
+      if (message.opCode !== OPCODE_MOVE) return;
 
-    // Parse the move data
-    // Client sends: { position: 4 }  (0-8, the cell index)
-    const data = JSON.parse(nk.binaryToString(message.data));
-    const position = data.position;
+      // Parse the move data
+      // Client sends: { position: 4 }  (0-8, the cell index)
+      const data = JSON.parse(nk.binaryToString(message.data));
+      const position = data.position;
 
-    logger.info("Move received from %s at position %d", senderId, position);
+      logger.info("Move received from %s at position %d", senderId, position);
 
-    // ---- VALIDATION ----
+      // ---- VALIDATION ----
 
-    // Is it this player's turn?
-    if (state.currentTurn !== senderId) {
-      logger.warn("Not this player's turn: %s", senderId);
-      return; // ignore the move
-    }
+      // Is it this player's turn?
+      if (state.currentTurn !== senderId) {
+        logger.warn("Not this player's turn: %s", senderId);
+        return; // ignore the move
+      }
 
-    // Is the position valid? (0-8)
-    if (position < 0 || position > 8) {
-      logger.warn("Invalid position: %d", position);
-      return;
-    }
+      // Is the position valid? (0-8)
+      if (position < 0 || position > 8) {
+        logger.warn("Invalid position: %d", position);
+        return;
+      }
 
-    // Is the cell already taken?
-    if (state.board[position] !== null) {
-      logger.warn("Cell already taken: %d", position);
-      return;
-    }
+      // Is the cell already taken?
+      if (state.board[position] !== null) {
+        logger.warn("Cell already taken: %d", position);
+        return;
+      }
 
-    // ---- APPLY THE MOVE ----
-    const symbol = state.playerSymbols[senderId];
-    state.board[position] = symbol;
+      // ---- APPLY THE MOVE ----
+      const symbol = state.playerSymbols[senderId];
+      state.board[position] = symbol;
 
-    // Get opponent ID cleanly — no looping needed since we only have 2 players
-    const playerIds = Object.keys(state.players);
-    const opponentId = playerIds[0] === senderId ? playerIds[1] : playerIds[0];
+      // Get opponent ID cleanly — no looping needed since we only have 2 players
+      const playerIds = Object.keys(state.players);
+      const opponentId = playerIds[0] === senderId ? playerIds[1] : playerIds[0];
 
-    // ── CHECK WIN ──
-    const winner = checkWinner(state.board);
+      // ── CHECK WIN ──
+      const winner = checkWinner(state.board);
 
-    if (winner) {
+      if (winner) {
 
-      logger.info("Winner found! saving stats now...");
+        logger.info("Winner found! saving stats now...");
 
-      // Someone won!
-      state.gameOver = true;
-      state.winner = senderId;
+        // Someone won!
+        state.gameOver = true;
+        state.winner = senderId;
 
-      // Save to permanent storage — genuine win, face to face
-      saveMatchResult(
-        nk, logger,
-        senderId,       // winner
-        opponentId,     // loser
-        "win",
-        "loss",
-        REASON_NORMAL,  // genuine face-to-face win
-        ctx.matchId
-      );
+        try {
+          // Save to permanent storage — genuine win, face to face
+          saveMatchResult(
+            nk, logger,
+            senderId,       // winner
+            opponentId,     // loser
+            "win",
+            "loss",
+            REASON_NORMAL,  // genuine face-to-face win
+            state.matchId
+          );
 
+          logger.info("[matchLoop] saveMatchResult called for win");
+        } catch (error) {
+          logger.error("[matchLoop] saveMatchResult failed: %s", (error as Error).message);
+        }
+
+        dispatcher.broadcastMessage(
+          OPCODE_GAME_OVER,
+          JSON.stringify({
+            board: state.board,
+            winner: senderId,
+            winnerSymbol: symbol
+          }),
+          null,
+          null
+        );
+        return;
+      }
+
+      // ---- CHECK DRAW ----
+      const isDraw = state.board.every(function (cell) {
+        return cell !== null;
+      });
+
+      if (isDraw) {
+        logger.info("[matchLoop] draw detected, saving stats");
+        state.gameOver = true;
+
+        // Save to permanent storage — draw has no reason
+        saveMatchResult(
+          nk, logger,
+          playerIds[0],
+          playerIds[1],
+          "draw",
+          "draw",
+          "",            // draw has no reason
+          state.matchId
+        );
+
+        dispatcher.broadcastMessage(
+          OPCODE_DRAW,
+          JSON.stringify({ board: state.board }),
+          null, null
+        );
+        return;
+      }
+
+      // ── SWITCH TURNS ──
+      state.currentTurn = opponentId;
+
+      // ── BROADCAST NEW BOARD STATE to both players ──
       dispatcher.broadcastMessage(
-        OPCODE_GAME_OVER,
+        OPCODE_GAME_STATE,
         JSON.stringify({
           board: state.board,
-          winner: senderId,
-          winnerSymbol: symbol
+          currentTurn: state.currentTurn,
+          lastMove: { position, symbol, playerId: senderId }
         }),
         null,
         null
       );
-      return;
+    } catch (error) {
+      logger.error("Error processing message: %s", error.message);
     }
-
-    // ---- CHECK DRAW ----
-    const isDraw = state.board.every(function (cell) {
-      return cell !== null;
-    });
-
-    if (isDraw) {
-      state.gameOver = true;
-
-      // Save to permanent storage — draw has no reason
-      saveMatchResult(
-        nk, logger,
-        playerIds[0],
-        playerIds[1],
-        "draw",
-        "draw",
-        "",            // draw has no reason
-        ctx.matchId
-      );
-
-      dispatcher.broadcastMessage(
-        OPCODE_DRAW,
-        JSON.stringify({ board: state.board }),
-        null, null
-      );
-      return;
-    }
-
-    // ── SWITCH TURNS ──
-    state.currentTurn = opponentId;
-
-    // ── BROADCAST NEW BOARD STATE to both players ──
-    dispatcher.broadcastMessage(
-      OPCODE_GAME_STATE,
-      JSON.stringify({
-        board: state.board,
-        currentTurn: state.currentTurn,
-        lastMove: { position, symbol, playerId: senderId }
-      }),
-      null,
-      null
-    );
   });
 
   return { state };
@@ -431,7 +462,7 @@ export function matchLeave(
         "win",
         "loss",
         REASON_PARTNER_LEFT, // reason: partner left mid-game
-        ctx.matchId
+        state.matchId
       );
     }
 
@@ -530,6 +561,7 @@ export function rpcGetStats(
       userId: userId
     }]);
     if (summaryRead && summaryRead.length > 0) {
+      logger.info("Summary found for", userId, "value:", summaryRead[0].value);
       const rawSummary = summaryRead[0].value;
       if (typeof rawSummary === "string") {
         summary = JSON.parse(rawSummary);
@@ -551,6 +583,8 @@ export function rpcGetStats(
   try {
     const matchRecords = nk.storageList(userId, "stats", 20);
     if (matchRecords && matchRecords.objects) {
+      logger.info("Match records found for", userId, "count:", matchRecords.objects.length);
+
       matchHistory = matchRecords.objects
         .filter(function (obj: any) {
           return obj.key.startsWith("match_");
