@@ -84,6 +84,8 @@ export default function App() {
       const res = await activeClient.rpc(activeSession, "get_stats", {});
       let payload: { summary?: Summary; matchHistory?: MatchRecord[] } | null = null;
 
+      console.log("RPC response payload:", res.payload);
+      
       if (typeof res.payload === "string") {
         payload = JSON.parse(res.payload);
       } else {
