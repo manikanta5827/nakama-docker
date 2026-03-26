@@ -53,10 +53,12 @@ function saveMatchResult(
 
         if (existing && existing.length > 0) {
           const rawValue = existing[0].value;
-          if (typeof rawValue === "string") {
-            summary = JSON.parse(rawValue);
-          } else if (rawValue && typeof rawValue === "object") {
-            summary = rawValue as { wins: number; losses: number; draws: number };
+          if (rawValue) {
+            summary = {
+              wins: Number(rawValue.wins) || 0,
+              losses: Number(rawValue.losses) || 0,
+              draws: Number(rawValue.draws) || 0,
+            };
           }
         }
 
@@ -80,7 +82,11 @@ function saveMatchResult(
             collection: "stats",
             key: "summary",
             userId: userId,
-            value: JSON.stringify(summary) as any,
+            value: {                    // ✅ plain object — NO JSON.stringify
+              wins: summary.wins,
+              losses: summary.losses,
+              draws: summary.draws
+            } as any,
             permissionRead: 1,
             permissionWrite: 0
           },
@@ -90,12 +96,12 @@ function saveMatchResult(
             collection: "stats",
             key: "match_" + matchId,
             userId: userId,
-            value: JSON.stringify({
-              result,               // "win" | "loss" | "draw"
-              reason,               // "normal" | "partner_left" | "" (draw has no reason)
-              opponent: opponentId,
-              timestamp
-            }),
+            value: {                    // ✅ plain object — NO JSON.stringify
+              result: String(result),
+              reason: String(reason),
+              opponent: String(opponentId),
+              timestamp: Number(timestamp)
+            } as any,
             permissionRead: 1,
             permissionWrite: 0
           }
@@ -562,16 +568,13 @@ export function rpcGetStats(
     }]);
     if (summaryRead && summaryRead.length > 0) {
       logger.info("Summary found for", userId, "value:", summaryRead[0].value);
+
       const rawSummary = summaryRead[0].value;
-      if (typeof rawSummary === "string") {
-        summary = JSON.parse(rawSummary);
-      } else if (rawSummary && typeof rawSummary === "object") {
-        summary = {
-          wins: typeof rawSummary.wins === "number" ? rawSummary.wins : 0,
-          losses: typeof rawSummary.losses === "number" ? rawSummary.losses : 0,
-          draws: typeof rawSummary.draws === "number" ? rawSummary.draws : 0,
-        };
-      }
+      summary = {
+        wins: Number(rawSummary.wins) || 0,
+        losses: Number(rawSummary.losses) || 0,
+        draws: Number(rawSummary.draws) || 0,
+      };
     }
   } catch (e) {
     logger.warn("No summary found for %s", userId);
@@ -590,19 +593,13 @@ export function rpcGetStats(
           return obj.key.startsWith("match_");
         })
         .map(function (obj: any) {
-          const raw = obj.value;
-          let val: any;
-          if (typeof raw === "string") {
-            val = JSON.parse(raw);
-          } else {
-            val = raw;
-          }
+          const raw = obj.value;  // already a plain object — no JSON.parse needed
           return {
             matchId: obj.key.replace("match_", ""),
-            result: val.result,
-            reason: val.reason,
-            opponent: val.opponent,
-            timestamp: val.timestamp
+            result: String(raw.result),
+            reason: String(raw.reason),
+            opponent: String(raw.opponent),
+            timestamp: Number(raw.timestamp)
           };
         })
         // Sort newest first
