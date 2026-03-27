@@ -26,7 +26,9 @@ function saveMatchResult(
   player1Result: string,  // "win" | "loss" | "draw"
   player2Result: string,
   reason: string,         // "normal" | "partner_left" | "timeout" | ""
-  matchId: string
+  matchId: string,
+  moves: any[],           // ✅ new
+  finalBoard: any[]       // ✅ new
 ): void {
 
   try {
@@ -100,7 +102,9 @@ function saveMatchResult(
               result: String(result),
               reason: String(reason),
               opponent: String(opponentId),
-              timestamp: Number(timestamp)
+              timestamp: Number(timestamp),
+              moves: moves,              // ✅ [{playerId, symbol, position, moveIndex}, ...]
+              finalBoard: finalBoard     // ✅ ["X", null, "O", "X", ...]
             } as any,
             permissionRead: 1,
             permissionWrite: 0
@@ -146,7 +150,8 @@ export function matchInit(
     currentTurn: null,            // nobody's turn yet
     gameOver: false,
     winner: null,
-    matchId: ctx.matchId.split(".")[0]
+    matchId: ctx.matchId.split(".")[0],
+    moves: []                     // ✅ new — tracks every move in order
   };
 
   return {
@@ -322,6 +327,14 @@ export function matchLoop(
       const symbol = state.playerSymbols[senderId];
       state.board[position] = symbol;
 
+      // ✅ Record this move
+      state.moves.push({
+        playerId: senderId,
+        symbol: symbol,
+        position: position,
+        moveIndex: state.moves.length  // 0, 1, 2, 3...
+      });
+
       // Get opponent ID cleanly — no looping needed since we only have 2 players
       const playerIds = Object.keys(state.players);
       const opponentId = playerIds[0] === senderId ? playerIds[1] : playerIds[0];
@@ -346,7 +359,9 @@ export function matchLoop(
             "win",
             "loss",
             REASON_NORMAL,  // genuine face-to-face win
-            state.matchId
+            state.matchId,
+            state.moves,    // ✅
+            state.board     // ✅
           );
 
           logger.info("[matchLoop] saveMatchResult called for win");
@@ -384,7 +399,9 @@ export function matchLoop(
           "draw",
           "draw",
           "",            // draw has no reason
-          state.matchId
+          state.matchId,
+          state.moves,   // ✅
+          state.board    // ✅
         );
 
         dispatcher.broadcastMessage(
@@ -481,7 +498,9 @@ export function matchLeave(
         "win",
         "loss",
         REASON_PARTNER_LEFT, // reason: partner left mid-game
-        state.matchId
+        state.matchId,
+        state.moves,         // ✅
+        state.board          // ✅
       );
     }
 
@@ -625,6 +644,45 @@ export function rpcGetStats(
   }
 
   return JSON.stringify({ summary, matchHistory });
+}
+
+export function rpcGetMatchDetail(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  payload: string
+): string {
+
+  const userId = ctx.userId;
+  const data = JSON.parse(payload);
+  const matchId = data.matchId;  // client passes matchId
+
+  try {
+    const records = nk.storageRead([{
+      collection: "stats",
+      key:        "match_" + matchId,
+      userId:     userId
+    }]);
+
+    if (!records || records.length === 0) {
+      return JSON.stringify({ error: "Match not found" });
+    }
+
+    const raw = records[0].value;
+    return JSON.stringify({
+      matchId,
+      result:     String(raw.result),
+      reason:     String(raw.reason),
+      opponent:   String(raw.opponent),
+      timestamp:  Number(raw.timestamp),
+      moves:      raw.moves      || [],
+      finalBoard: raw.finalBoard || []
+    });
+
+  } catch (e) {
+    logger.error("rpcGetMatchDetail error: %s", JSON.stringify(e));
+    return JSON.stringify({ error: "Failed to fetch match detail" });
+  }
 }
 
 

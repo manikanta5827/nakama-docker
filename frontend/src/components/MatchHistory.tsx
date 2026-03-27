@@ -5,9 +5,10 @@ import { resultColor, resultIcon, reasonLabel, timeAgo } from "@/lib/helper";
 
 interface MatchHistoryProps {
   matchHistory: MatchRecord[];
+  onMatchClick?: (match: MatchRecord) => void;
 }
 
-export function MatchHistory({ matchHistory }: MatchHistoryProps) {
+export function MatchHistory({ matchHistory, onMatchClick }: MatchHistoryProps) {
   return (
     <div className="flex flex-col gap-3">
       {matchHistory.length === 0 && (
@@ -18,7 +19,11 @@ export function MatchHistory({ matchHistory }: MatchHistoryProps) {
       )}
 
       {matchHistory.map((match, i) => (
-        <Card key={i} className="overflow-hidden border-none bg-background/50 hover:bg-background transition-colors shrink-0">
+        <Card
+          key={i}
+          className="overflow-hidden border-none bg-background/50 hover:bg-background transition-colors shrink-0 cursor-pointer"
+          onClick={() => onMatchClick?.(match)}
+        >
           <div className="flex justify-between items-start p-3.5 border-l-4" style={{ borderLeftColor: resultColor(match.result) }}>
             <div className="flex gap-3.5">
               <div className="flex items-center justify-center size-9 rounded-full bg-muted/40 shrink-0 mt-0.5">

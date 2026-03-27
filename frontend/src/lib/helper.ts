@@ -61,6 +61,35 @@ export const fetchStats = async (
   }
 };
 
+export const fetchMatchDetail = async (
+  client: Client | null,
+  session: Session | null,
+  matchId: string
+) => {
+  if (!client || !session) return null;
+
+  try {
+    const res = await client.rpc(session, "get_match_detail", { matchId });
+    let payload: any = null;
+
+    if (typeof res.payload === "string") {
+      payload = JSON.parse(res.payload);
+    } else {
+      payload = res.payload;
+    }
+
+    if (payload.error) {
+      console.error("Failed to fetch match detail:", payload.error);
+      return null;
+    }
+
+    return payload;
+  } catch (e) {
+    console.error("Failed to fetch match detail:", e);
+    return null;
+  }
+};
+
 export const joinMatchById = async (
   id: string,
   socket: Socket | null,

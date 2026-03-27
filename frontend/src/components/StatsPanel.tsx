@@ -10,9 +10,10 @@ interface StatsPanelProps {
   matchHistory: MatchRecord[];
   loadingStats: boolean;
   onRefreshStats: () => void;
+  onMatchClick?: (match: MatchRecord) => void;
 }
 
-export function StatsPanel({ summary, matchHistory, loadingStats, onRefreshStats }: StatsPanelProps) {
+export function StatsPanel({ summary, matchHistory, loadingStats, onRefreshStats, onMatchClick }: StatsPanelProps) {
   return (
     <div className="w-full md:w-[380px] h-[40dvh] md:h-full flex flex-col p-6 md:p-8 bg-muted/10 overflow-y-auto border-l border-border shrink-0">
       <div className="flex justify-between items-center mb-8 shrink-0">
@@ -35,7 +36,7 @@ export function StatsPanel({ summary, matchHistory, loadingStats, onRefreshStats
 
       <div className="text-[10px] tracking-[0.2em] text-muted-foreground uppercase mb-4 font-bold px-1 shrink-0">Recent Matches</div>
 
-      <MatchHistory matchHistory={matchHistory} />
+      <MatchHistory matchHistory={matchHistory} onMatchClick={onMatchClick} />
     </div>
   );
 }

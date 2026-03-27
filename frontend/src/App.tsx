@@ -12,8 +12,8 @@ import {
   NAKAMA_PORT,
   NAKAMA_SERVER_KEY
 } from "@/constants";
-import { type Board, type MatchRecord } from "@/types";
-import { fetchStats, joinMatchById, createMatch, joinMatch, leaveGame } from "@/lib/helper";
+import { type Board, type MatchRecord, type MatchDetail } from "@/types";
+import { fetchStats, joinMatchById, createMatch, joinMatch, leaveGame, fetchMatchDetail } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { GameHeader } from "@/components/GameHeader";
@@ -23,6 +23,7 @@ import { LobbyButtons } from "@/components/LobbyButtons";
 import { GameBoard } from "@/components/GameBoard";
 import { TurnStatus } from "@/components/TurnStatus";
 import { StatsPanel } from "@/components/StatsPanel";
+import { MatchReplay } from "@/components/MatchReplay";
 
 // ── Main Component ─────────────────────────────────────────
 export default function App() {
@@ -44,6 +45,8 @@ export default function App() {
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [searchTimer, setSearchTimer] = useState<number>(0);
   const searchTimerRef = useRef<number | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchDetail | null>(null);
+  const [showReplay, setShowReplay] = useState<boolean>(false);
 
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
@@ -97,6 +100,14 @@ export default function App() {
   // ── Fetch Stats from Server ──────────────────────────────
   const handleFetchStats = useCallback(() => {
     fetchStats(client, session, setSummary, setMatchHistory, setLoadingStats);
+  }, [client, session]);
+
+  const handleMatchClick = useCallback(async (match: MatchRecord) => {
+    const detail = await fetchMatchDetail(client, session, match.matchId);
+    if (detail) {
+      setSelectedMatch(detail);
+      setShowReplay(true);
+    }
   }, [client, session]);
 
   useEffect(() => {
@@ -355,7 +366,14 @@ export default function App() {
         matchHistory={matchHistory}
         loadingStats={loadingStats}
         onRefreshStats={handleFetchStats}
+        onMatchClick={handleMatchClick}
       />
+      {showReplay && selectedMatch && (
+        <MatchReplay
+          matchDetail={selectedMatch}
+          onClose={() => setShowReplay(false)}
+        />
+      )}
     </div>
   );
 }
