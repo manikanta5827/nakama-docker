@@ -28,10 +28,9 @@ import {
   fetchLeaderboard,
 } from '@/lib/helper';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Copy, Check } from 'lucide-react';
 import { GameHeader } from '@/components/GameHeader';
-import { MatchIdDisplay } from '@/components/MatchIdDisplay';
-import { SymbolDisplay } from '@/components/SymbolDisplay';
+
 import { LobbyButtons } from '@/components/LobbyButtons';
 import { GameBoard } from '@/components/GameBoard';
 import { TurnStatus } from '@/components/TurnStatus';
@@ -61,11 +60,23 @@ export default function App() {
   const [showReplay, setShowReplay] = useState<boolean>(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [matchIdCopied, setMatchIdCopied] = useState(false);
 
   const stopSearchTimer = () => {
     if (searchTimerRef.current !== null) {
       clearInterval(searchTimerRef.current);
       searchTimerRef.current = null;
+    }
+  };
+
+  const copyMatchIdToClipboard = async () => {
+    if (!matchId) return;
+    try {
+      await navigator.clipboard.writeText(matchId);
+      setMatchIdCopied(true);
+      setTimeout(() => setMatchIdCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy match ID:', err);
     }
   };
 
@@ -504,15 +515,51 @@ export default function App() {
       <div className="flex-1 flex flex-col items-center justify-start pt-8 md:pt-12 p-6 md:p-10 border-b md:border-b-0 md:border-r border-border overflow-y-auto min-h-0">
         <GameHeader displayName={displayName} status={status} />
 
-        {matchId && <MatchIdDisplay matchId={matchId} />}
-
-        {matchId && opponentName && (
-          <p className="text-lg mt-2">
-            Playing against: <strong>{opponentName}</strong>
-          </p>
+        {matchId && (
+          <div className="w-full space-y-2 mt-3">
+            <div className="w-full flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-semibold">{displayName ?? 'You'}</span>
+                <span>vs</span>
+                <span className="font-semibold">
+                  {opponentName ?? 'Waiting...'}
+                </span>
+                <span className="pl-2">
+                  You are <strong>{mySymbol ?? '-'}</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Match ID:</span>
+                <code className="text-primary font-mono text-xs">
+                  {matchId.substring(0, 12)}...
+                </code>
+                <button
+                  onClick={copyMatchIdToClipboard}
+                  className="p-1 hover:bg-muted rounded transition-colors"
+                  title="Copy Match ID"
+                >
+                  {matchIdCopied ? (
+                    <Check className="size-4 text-green-500" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="text-sm font-medium text-primary mb-10">
+              {isMyTurn
+                ? '🎯 Your Turn'
+                : winner
+                  ? winner === 'You Win'
+                    ? '🏆 You Win!'
+                    : `${winner} Wins!`
+                  : isDraw
+                    ? '🤝 Draw!'
+                    : '⏳ Waiting for ' +
+                      (currentTurn === session?.user_id ? 'you' : 'opponent')}
+            </div>
+          </div>
         )}
-
-        <SymbolDisplay mySymbol={mySymbol} />
 
         {!matchId && !matchmakerTicket && (
           <LobbyButtons
@@ -539,21 +586,16 @@ export default function App() {
               onMakeMove={makeMove}
             />
 
-            <TurnStatus
-              winner={winner}
-              isDraw={isDraw}
-              isMyTurn={isMyTurn}
-              currentTurn={currentTurn}
-            />
-
-            <Button
-              variant="ghost"
-              className="mt-10 text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0"
-              onClick={handleLeaveGame}
-            >
-              <LogOut className="mr-2 size-4" />
-              Leave Game
-            </Button>
+            <div className="w-full flex items-center justify-end mt-3">
+              <Button
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0"
+                onClick={handleLeaveGame}
+              >
+                <LogOut className="mr-2 size-4" />
+                Leave Game
+              </Button>
+            </div>
           </>
         )}
       </div>
