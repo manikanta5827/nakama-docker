@@ -1,5 +1,5 @@
 import { rpcHealthCheck } from './healthcheck';
-import { rpcCreateMatch, matchInit, matchJoin, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate, rpcGetStats } from './match';
+import { rpcCreateMatch, matchInit, matchJoin,matchmakerMatched, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate, rpcGetStats } from './match';
 import { MODULE_NAME } from './constants';
 
 function InitModule(
@@ -29,6 +29,8 @@ function InitModule(
     });
     initializer.registerRpc("create_match", rpcCreateMatch);
     initializer.registerRpc("get_stats", rpcGetStats);
+
+    initializer.registerMatchmakerMatched(matchmakerMatched);
     
     logger.info("match handler registered");
   } catch (error) {
