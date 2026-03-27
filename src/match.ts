@@ -211,7 +211,7 @@ export function matchJoin(
     state.playerSymbols[presence.userId] = playerCount === 1 ? "X" : "O";
 
     logger.info(
-      "Player joined: %s as %s",
+      "ppppplayer joined: %s as %s",
       presence.userId,
       state.playerSymbols[presence.userId]
     );
@@ -567,7 +567,7 @@ export function rpcGetStats(
       userId: userId
     }]);
     if (summaryRead && summaryRead.length > 0) {
-      logger.info("Summary found for", userId, "value:", summaryRead[0].value);
+      // logger.info("Summary found for", userId, "value:", summaryRead[0].value);
 
       const rawSummary = summaryRead[0].value;
       summary = {
@@ -586,7 +586,7 @@ export function rpcGetStats(
   try {
     const matchRecords = nk.storageList(userId, "stats", 20);
     if (matchRecords && matchRecords.objects) {
-      logger.info("Match records found for", userId, "count:", matchRecords.objects.length);
+      // logger.info("Match records found for", userId, "count:", matchRecords.objects.length);
 
       matchHistory = matchRecords.objects
         .filter(function (obj: any) {
