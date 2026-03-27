@@ -1,6 +1,4 @@
-// Think of opcodes like event type numbers
-// Client and server use these numbers to know what a message means
-
+// opcodes for message types
 export const OPCODE_MOVE = 1;
 export const OPCODE_GAME_STATE = 2;
 export const OPCODE_GAME_OVER = 3;
@@ -11,17 +9,17 @@ export const OPCODE_SERVER_SHUTDOWN = 7;
 
 export const MODULE_NAME = "tictactoe";
 
-// Win reasons — why did this result happen
-export const REASON_NORMAL = "normal";           // genuine face to face
-export const REASON_PARTNER_LEFT = "partner_left"; // opponent disconnected
-export const REASON_TIMEOUT = "timeout";          // opponent timed out
+// reasons for match end
+export const REASON_NORMAL = "normal";
+export const REASON_PARTNER_LEFT = "partner_left";
+export const REASON_TIMEOUT = "timeout";
 
-// The match state shape — this is your "database" for one game session
+// match state structure
 export interface MatchState {
-  board: Array<string | null>;  // 9 cells, null = empty, "X" or "O"
+  board: Array<string | null>;
   players: {[userId: string]: nkruntime.Presence};
-  playerSymbols: {[userId: string]: string}; // userId → "X" or "O"
-  currentTurn: string | null;   // userId of who moves next
+  playerSymbols: {[userId: string]: string};
+  currentTurn: string | null;
   gameOver: boolean;
-  winner: string | null;        // userId of winner, null if draw
+  winner: string | null;
 }

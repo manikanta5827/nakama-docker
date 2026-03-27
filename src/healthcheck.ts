@@ -1,6 +1,4 @@
-// This is your first RPC — think of it like a Lambda function
-// Client calls "healthcheck" → this function runs → returns JSON
-
+// rpc for checking server health
 export function rpcHealthCheck(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,

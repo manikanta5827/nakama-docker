@@ -2,6 +2,7 @@ import { rpcHealthCheck } from './healthcheck';
 import { rpcCreateMatch, matchInit, matchJoin,matchmakerMatched, matchJoinAttempt, matchLeave, matchLoop, matchSignal, matchTerminate, rpcGetStats, rpcGetMatchDetail, rpcGetLeaderboard } from './match';
 import { MODULE_NAME } from './constants';
 
+// initializes module and registers handlers
 function InitModule(
   ctx: nkruntime.Context,
   logger: nkruntime.Logger,
@@ -10,6 +11,7 @@ function InitModule(
 ): void {
 
   try {
+    // registers healthcheck rpc
     initializer.registerRpc("healthcheck", rpcHealthCheck);
     logger.info("healthcheck RPC registered");
   } catch (error) {
@@ -17,14 +19,14 @@ function InitModule(
   }
 
   try {
-    // Create global wins leaderboard
+    // creates global wins leaderboard
     nk.leaderboardCreate(
-      "global_wins",    // leaderboard ID
-      false,            // authoritative — only server can write
-      nkruntime.SortOrder.DESCENDING,  // sort order — highest first
-      nkruntime.Operator.INCREMENTAL,  // operator — increment (add to existing score)
-      null,             // reset schedule — never reset
-      {}                // metadata
+      "global_wins",
+      false,
+      nkruntime.SortOrder.DESCENDING,
+      nkruntime.Operator.INCREMENTAL,
+      null,
+      {}
     );
     logger.info("Global wins leaderboard created");
   } catch (error) {
@@ -32,7 +34,7 @@ function InitModule(
   }
 
   try {
-    // Register the match handler — ALL 7 functions in one call
+    // registers match handlers and rpcs
     initializer.registerMatch(MODULE_NAME, {
       matchInit,
       matchJoinAttempt,
@@ -42,6 +44,7 @@ function InitModule(
       matchTerminate,
       matchSignal,
     });
+    
     initializer.registerRpc("create_match", rpcCreateMatch);
     initializer.registerRpc("get_stats", rpcGetStats);
     initializer.registerRpc("get_match_detail", rpcGetMatchDetail);
