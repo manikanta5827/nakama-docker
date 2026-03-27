@@ -220,6 +220,18 @@ export function matchJoin(
   // If 2 players are now in — start the game!
   const playerCount = Object.keys(state.players).length;
   if (playerCount === 2) {
+    const playerIds = Object.keys(state.players);
+
+    // Fetch display names for both players from Nakama accounts
+    const accounts = nk.usersGetId(playerIds);
+
+    // Build a displayNames map { userId: displayName }
+    const displayNames: {[key: string]: string} = {};
+    accounts.forEach(function(account) {
+      displayNames[account.userId] = account.displayName || account.username || "Unknown";
+    });
+
+
     // First player (X) goes first
     const xPlayerId = Object.keys(state.playerSymbols).find(function (id) {
       return state.playerSymbols[id] === "X";
@@ -236,7 +248,8 @@ export function matchJoin(
       JSON.stringify({
         board: state.board,
         playerSymbols: state.playerSymbols,
-        currentTurn: state.currentTurn
+        currentTurn: state.currentTurn,
+        displayNames: displayNames
       }),
       null,  // null = send to ALL players in match
       null
@@ -612,4 +625,22 @@ export function rpcGetStats(
   }
 
   return JSON.stringify({ summary, matchHistory });
+}
+
+
+
+export function matchmakerMatched(
+  ctx: nkruntime.Context,
+  logger: nkruntime.Logger,
+  nk: nkruntime.Nakama,
+  matches: nkruntime.MatchmakerResult[]
+): string | void {
+
+  // Create an authoritative match using YOUR handler
+  const matchId = nk.matchCreate(MODULE_NAME, {});
+  
+  logger.info("Matchmaker created authoritative match: %s", matchId);
+  
+  // Return the matchId — Nakama sends this to both clients as the token
+  return matchId;
 }
