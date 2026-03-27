@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Client, Session, type Socket } from "@heroiclabs/nakama-js";
 import {
   OPCODE_MOVE,
@@ -26,21 +26,24 @@ import { StatsPanel } from "@/components/StatsPanel";
 
 // ── Main Component ─────────────────────────────────────────
 export default function App() {
-  const [client,       setClient]       = useState<Client | null>(null);
-  const [session,      setSession]      = useState<Session | null>(null);
-  const [socket,       setSocket]       = useState<Socket | null>(null);
-  const [matchId,      setMatchId]      = useState<string | null>(null);
-  const [board,        setBoard]        = useState<Board>(Array(9).fill(null));
-  const [mySymbol,     setMySymbol]     = useState<string | null>(null);
-  const [currentTurn,  setCurrentTurn]  = useState<string | null>(null);
-  const [status,       setStatus]       = useState("Connecting...");
-  const [winner,       setWinner]       = useState<string | null>(null);
-  const [isDraw,       setIsDraw]       = useState(false);
-  const [displayName,  setDisplayName]  = useState<string | null>(null);
-  const [summary,      setSummary]      = useState({ wins: 0, losses: 0, draws: 0 });
+  const [client, setClient] = useState<Client | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const [board, setBoard] = useState<Board>(Array(9).fill(null));
+  const [mySymbol, setMySymbol] = useState<string | null>(null);
+  const [currentTurn, setCurrentTurn] = useState<string | null>(null);
+  const [status, setStatus] = useState("Connecting...");
+  const [winner, setWinner] = useState<string | null>(null);
+  const [isDraw, setIsDraw] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [summary, setSummary] = useState({ wins: 0, losses: 0, draws: 0 });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [matchmakerTicket, setMatchmakerTicket] = useState<string | null>(null);
+  const [opponentName, setOpponentName] = useState<string | null>(null);
+  const [searchTimer, setSearchTimer] = useState<number>(0);
+  const searchTimerRef = useRef<number | null>(null);
 
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
@@ -101,7 +104,7 @@ export default function App() {
 
     socket.onmatchdata = (matchData) => {
       const opCode = matchData.op_code;
-      const data   = JSON.parse(new TextDecoder().decode(matchData.data));
+      const data = JSON.parse(new TextDecoder().decode(matchData.data));
 
       switch (opCode) {
         case OPCODE_START:
@@ -116,6 +119,15 @@ export default function App() {
           console.log(`My symbol: ${mySymbol}, Opponent symbol: ${opponentSymbol}`);
           console.log(`Current turn: ${data.currentTurn}, My user ID: ${session.user_id}`);
 
+          const opponentId = Object.keys(data.playerSymbols)
+            .find(id => id !== session.user_id);
+
+          console.log("Opponent ID:", opponentId);
+          if (opponentId && data.displayNames) {
+            console.log("Opponent display name:", data.displayNames[opponentId]);
+            setOpponentName(data.displayNames[opponentId]);
+          }
+
           setStatus("Game on!");
           setStatus("Game on!");
           break;
@@ -124,25 +136,43 @@ export default function App() {
           console.log("Game state update:", data);
           setBoard(data.board);
           setCurrentTurn(data.currentTurn);
+
+          if (session?.user_id) {
+            setStatus(data.currentTurn === session.user_id ? "Your Turn" : "Opponent's Turn");
+          } else {
+            setStatus("Game ongoing");
+          }
           break;
 
         case OPCODE_GAME_OVER:
           setBoard(data.board);
           setWinner(data.winnerSymbol);
-          setStatus("Game Over");
+          setStatus("Game Over — Returning to lobby in 3...");
+          stopSearchTimer();
+          setTimeout(() => setStatus("Game Over — Returning to lobby in 2..."), 1000);
+          setTimeout(() => setStatus("Game Over — Returning to lobby in 1..."), 2000);
+          setTimeout(() => window.location.reload(), 3000);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
         case OPCODE_DRAW:
           setBoard(data.board);
           setIsDraw(true);
-          setStatus("Draw!");
+          setStatus("Draw! — Returning to lobby in 3...");
+          stopSearchTimer();
+          setTimeout(() => setStatus("Draw! — Returning to lobby in 2..."), 1000);
+          setTimeout(() => setStatus("Draw! — Returning to lobby in 1..."), 2000);
+          setTimeout(() => window.location.reload(), 3000);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
         case OPCODE_PARTNER_LEFT:
-          setStatus("Opponent left — You Win! 🏆");
+          setStatus("Opponent left — You Win! 🏆 Returning to lobby in 3...");
           setWinner(mySymbol);
+          stopSearchTimer();
+          setTimeout(() => setStatus("Opponent left — You Win! 🏆 Returning to lobby in 2..."), 1000);
+          setTimeout(() => setStatus("Opponent left — You Win! 🏆 Returning to lobby in 1..."), 2000);
+          setTimeout(() => window.location.reload(), 3000);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
@@ -157,22 +187,40 @@ export default function App() {
         console.log("Match found:", matched);
         setStatus("Opponent found! Joining...");
 
-        // Extract matchId from token BEFORE joining
-        // Token contains matchId — decode it
-        const tokenParts = matched.token.split(".");
-        const tokenBody = JSON.parse(atob(tokenParts[1]));
-        const extractedMatchId = tokenBody.mid;  // mid = matchId inside JWT
-        
-        setMatchId(extractedMatchId);            // ✅ set BEFORE joining
-        setMatchmakerTicket(null);
+        // Nakama matchmaker matched may provide match_id directly.
+        // Fallback to token decode if available.
+        let joinedMatchId = matched.match_id ?? null;
 
-        await socket.joinMatch(undefined, matched.token);
+        if (!joinedMatchId && matched.token) {
+          const tokenParts = matched.token.split(".");
+          if (tokenParts.length > 1) {
+            const tokenBody = JSON.parse(atob(tokenParts[1]));
+            joinedMatchId = tokenBody.mid ?? tokenBody.match_id ?? null;
+          }
+        }
+
+        if (!joinedMatchId) {
+          throw new Error("Unable to determine match ID from matchmaking response");
+        }
+
+        setMatchId(joinedMatchId);            // ✅ set BEFORE joining
+        setMatchmakerTicket(null);
+        stopSearchTimer();
+
+        await socket.joinMatch(joinedMatchId);
       } catch (e) {
         console.error("Join matched error:", e);
         setStatus("Failed to join match");
+        stopSearchTimer();
       }
     };
   }, [socket, session]);
+
+  useEffect(() => {
+    return () => {
+      stopSearchTimer();
+    };
+  }, []);
 
   // ── Match Actions ────────────────────────────────────────
   const handleJoinMatchById = useCallback((id: string) => {
@@ -197,12 +245,32 @@ export default function App() {
     try {
       const ticket = await socket.addMatchmaker("*", 2, 2, {}, {});
       setMatchmakerTicket(ticket.ticket);
-      setStatus("Searching for opponent...");
+
+      setSearchTimer(1);
+      setStatus("Searching for opponent… 1");
+
+      stopSearchTimer();
+      searchTimerRef.current = window.setInterval(() => {
+        setSearchTimer((prev) => {
+          const next = prev + 1;
+          setStatus(`Searching for opponent… ${next}`);
+          return next;
+        });
+      }, 1000);
     } catch (e) {
       console.error("Find match error:", e);
       setStatus("Failed to find match");
+      stopSearchTimer();
     }
   }, [socket]);
+
+  const stopSearchTimer = () => {
+    if (searchTimerRef.current !== null) {
+      clearInterval(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+    setSearchTimer(0);
+  };
 
   const handleCancelSearch = useCallback(async () => {
     if (!socket || !matchmakerTicket) return;
@@ -211,6 +279,7 @@ export default function App() {
       await socket.removeMatchmaker(matchmakerTicket);
       setMatchmakerTicket(null);
       setStatus("Ready to play");
+      stopSearchTimer();
     } catch (e) {
       console.error("Cancel search error:", e);
     }
@@ -238,6 +307,10 @@ export default function App() {
         <GameHeader displayName={displayName} status={status} />
 
         {matchId && <MatchIdDisplay matchId={matchId} />}
+
+        {matchId && opponentName && (
+          <p className="text-lg mt-2">Playing against: <strong>{opponentName}</strong></p>
+        )}
 
         <SymbolDisplay mySymbol={mySymbol} />
 
