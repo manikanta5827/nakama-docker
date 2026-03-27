@@ -18,7 +18,7 @@ export function TurnStatus({ winner, isDraw, isMyTurn, currentTurn }: TurnStatus
       ) : winner ? (
         <div className="flex items-center gap-2 text-green-500 animate-bounce">
           <Trophy className="size-6" />
-          <span>{winner} Wins!</span>
+          <span>{winner === "You Win" ? "You Win!" : `${winner} Wins!`}</span>
         </div>
       ) : isDraw ? (
         <div className="flex items-center gap-2 text-yellow-500">
