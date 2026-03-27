@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 interface LobbyButtonsProps {
   onCreateMatch: () => void;
   onJoinMatch: () => void;
+  onFindMatch: () => void;
 }
 
-export function LobbyButtons({ onCreateMatch, onJoinMatch }: LobbyButtonsProps) {
+export function LobbyButtons({ onCreateMatch, onJoinMatch, onFindMatch }: LobbyButtonsProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs sm:max-w-none sm:justify-center shrink-0">
       <Button
@@ -22,6 +23,14 @@ export function LobbyButtons({ onCreateMatch, onJoinMatch }: LobbyButtonsProps) 
         onClick={onJoinMatch}
       >
         Join Match
+      </Button>
+      <Button
+        variant="secondary"
+        size="lg"
+        className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold uppercase tracking-widest h-14 px-10 shadow-lg"
+        onClick={onFindMatch}
+      >
+        Find Match
       </Button>
     </div>
   );

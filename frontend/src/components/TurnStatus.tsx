@@ -4,12 +4,18 @@ interface TurnStatusProps {
   winner: string | null;
   isDraw: boolean;
   isMyTurn: boolean;
+  currentTurn: string | null;
 }
 
-export function TurnStatus({ winner, isDraw, isMyTurn }: TurnStatusProps) {
+export function TurnStatus({ winner, isDraw, isMyTurn, currentTurn }: TurnStatusProps) {
   return (
     <div className="mt-10 text-xl font-bold min-h-[40px] flex items-center justify-center shrink-0">
-      {winner ? (
+      {!currentTurn && !winner && !isDraw ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Clock className="size-5 animate-spin-slow" />
+          <span>Waiting for game start...</span>
+        </div>
+      ) : winner ? (
         <div className="flex items-center gap-2 text-green-500 animate-bounce">
           <Trophy className="size-6" />
           <span>{winner} Wins!</span>
