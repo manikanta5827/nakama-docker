@@ -25,6 +25,7 @@ function saveMatchResult(
   finalBoard: any[]
 ): void {
   try {
+    logger.info('saving match result for %s and %s', player1Id, player2Id);
     const timestamp = Date.now();
 
     const writeForPlayer = (
@@ -55,7 +56,7 @@ function saveMatchResult(
           }
         }
       } catch (e) {
-        logger.warn('No summary yet for %s', userId);
+        logger.warn('no summary found for %s', userId);
       }
 
       // updates summary totals
@@ -75,7 +76,7 @@ function saveMatchResult(
             {}
           );
         } catch (error) {
-          logger.error('Leaderboard write failed: %s', error.message);
+          logger.error('leaderboard write failed: %s', error.message);
         }
       }
 
@@ -111,14 +112,14 @@ function saveMatchResult(
           },
         ]);
       } catch (error) {
-        logger.error('Storage write error: %s', JSON.stringify(error));
+        logger.error('storage write error: %s', JSON.stringify(error));
       }
     };
 
     writeForPlayer(player1Id, player2Id, player1Result);
     writeForPlayer(player2Id, player1Id, player2Result);
   } catch (error) {
-    logger.error('Error saving match result: %s', JSON.stringify(error));
+    logger.error('error saving match result: %s', JSON.stringify(error));
   }
 }
 
@@ -129,6 +130,7 @@ export function matchInit(
   nk: nkruntime.Nakama,
   params: { [key: string]: string }
 ): { state: nkruntime.MatchState; tickRate: number; label: string } {
+  logger.info('match created: %s', ctx.matchId);
   const state: nkruntime.MatchState = {
     board: Array(9).fill(null),
     players: {},
@@ -189,10 +191,13 @@ export function matchJoin(
     state.players[presence.userId] = presence;
     const playerCount = Object.keys(state.players).length;
     state.playerSymbols[presence.userId] = playerCount === 1 ? 'X' : 'O';
+    logger.info('player joined: %s', presence.userId);
   });
 
   const playerCount = Object.keys(state.players).length;
   if (playerCount === 2) {
+
+    // fetches player display names
     const playerIds = Object.keys(state.players);
     const accounts = nk.usersGetId(playerIds);
     const displayNames: { [key: string]: string } = {};
@@ -200,11 +205,13 @@ export function matchJoin(
       displayNames[account.userId] = account.displayName || account.username || 'unknown';
     });
 
+    // get x-player and set starting turn
     const xPlayerId = Object.keys(state.playerSymbols).find(function (id) {
       return state.playerSymbols[id] === 'X';
     });
 
     state.currentTurn = xPlayerId || null;
+    logger.info('game starting, turn: %s', state.currentTurn);
 
     // broadcasts start message
     dispatcher.broadcastMessage(
@@ -265,6 +272,7 @@ export function matchLoop(
       // checks for winner
       const winner = checkWinner(state.board);
       if (winner) {
+        logger.info('winner detected: %s', senderId);
         state.gameOver = true;
         state.winner = senderId;
 
@@ -300,6 +308,7 @@ export function matchLoop(
       });
 
       if (isDraw) {
+        logger.info('match draw');
         state.gameOver = true;
         saveMatchResult(
           nk,
@@ -336,7 +345,7 @@ export function matchLoop(
         null
       );
     } catch (error) {
-      logger.error('Error processing message: %s', error.message);
+      logger.error('error processing message: %s', error.message);
     }
   });
 
@@ -375,6 +384,7 @@ export function matchLeave(
 
   const leavingPlayerId = presences[0].userId;
   delete state.players[leavingPlayerId];
+  logger.info('player left: %s', leavingPlayerId);
 
   // ends match if player leaves mid-game
   if (Object.keys(state.players).length < 2 && !state.gameOver) {
@@ -417,6 +427,7 @@ export function matchTerminate(
   state: nkruntime.MatchState,
   graceSeconds: number
 ): { state: nkruntime.MatchState } | null {
+  logger.info('match terminating');
   dispatcher.broadcastMessage(
     OPCODE_SERVER_SHUTDOWN,
     JSON.stringify({ reason: 'server shutting down' }),
@@ -448,6 +459,7 @@ export function rpcCreateMatch(
   payload: string
 ): string {
   const matchId = nk.matchCreate(MODULE_NAME, {});
+  logger.info('match created via rpc: %s', matchId);
   return JSON.stringify({ matchId });
 }
 
@@ -474,7 +486,7 @@ export function rpcGetStats(
       };
     }
   } catch (e) {
-    logger.warn('No summary found for %s', userId);
+    logger.warn('no summary found for %s', userId);
   }
 
   let matchHistory: any[] = [];
@@ -500,7 +512,7 @@ export function rpcGetStats(
         });
     }
   } catch (e) {
-    logger.warn('Could not fetch match history for %s', userId);
+    logger.warn('could not fetch match history for %s', userId);
   }
 
   return JSON.stringify({ summary, matchHistory });
@@ -587,5 +599,6 @@ export function matchmakerMatched(
   matches: nkruntime.MatchmakerResult[]
 ): string | void {
   const matchId = nk.matchCreate(MODULE_NAME, {});
+  logger.info('matchmaker matched, created: %s', matchId);
   return matchId;
 }
