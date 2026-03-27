@@ -30,3 +30,10 @@ export interface MatchDetail {
   moves:     Move[];
   finalBoard: Board;
 }
+
+export interface LeaderboardEntry {
+  rank:     number;
+  userId:   string;
+  username: string;
+  score:    number;
+}

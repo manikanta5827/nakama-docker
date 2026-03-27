@@ -1,6 +1,6 @@
 import { Client, Session } from "@heroiclabs/nakama-js";
 import type {Socket} from "@heroiclabs/nakama-js";
-import { type Summary, type MatchRecord } from "@/types";
+import { type Summary, type MatchRecord, type LeaderboardEntry } from "@/types";
 
 export function resultColor(result: string) {
   if (result === "win")  return "#4ade80";
@@ -131,4 +131,36 @@ export const joinMatch = async (joinMatchById: (id: string) => void) => {
 
 export const leaveGame = () => {
   window.location.reload();
+};
+
+export const fetchLeaderboard = async (
+  client: Client | null,
+  session: Session | null,
+  setLeaderboard: (leaderboard: LeaderboardEntry[]) => void,
+  setLoadingLeaderboard: (loading: boolean) => void
+) => {
+  if (!client || !session) return;
+
+  setLoadingLeaderboard(true);
+  try {
+    const res = await client.rpc(session, "get_leaderboard", {});
+    let payload: any = null;
+
+    if (typeof res.payload === "string") {
+      payload = JSON.parse(res.payload);
+    } else {
+      payload = res.payload;
+    }
+
+    const leaderboardData = Array.isArray(payload?.leaderboard)
+      ? payload.leaderboard
+      : [];
+
+    setLeaderboard(leaderboardData as LeaderboardEntry[]);
+  } catch (e) {
+    console.error("Failed to fetch leaderboard:", e);
+    setLeaderboard([]);
+  } finally {
+    setLoadingLeaderboard(false);
+  }
 };
