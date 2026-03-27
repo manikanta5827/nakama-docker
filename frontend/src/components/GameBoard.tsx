@@ -16,27 +16,31 @@ export function GameBoard({
   isDraw,
   onMakeMove,
 }: GameBoardProps) {
-  const playMoveSound = () => {
+  const playMoveFeedback = () => {
     try {
       const AudioContext =
         window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = 380;
-      gain.gain.value = 0.06;
+      osc.type = 'square';
+      osc.frequency.value = 450;
+      gain.gain.value = 0.14;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+      osc.stop(ctx.currentTime + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
       setTimeout(() => {
         ctx.close().catch(() => {});
-      }, 200);
+      }, 300);
     } catch (error) {
       // ignore audio errors, best-effort effect
       console.warn('Move sound failed', error);
+    }
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([25, 15, 25]);
     }
   };
 
@@ -55,7 +59,7 @@ export function GameBoard({
           )}
           onClick={() => {
             if (cell || !isMyTurn || winner || isDraw) return;
-            playMoveSound();
+            playMoveFeedback();
             onMakeMove(i);
           }}
           disabled={!!cell || !isMyTurn || !!winner || isDraw}
