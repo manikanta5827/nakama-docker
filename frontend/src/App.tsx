@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { Client, Session, type Socket } from "@heroiclabs/nakama-js";
-import { 
-  OPCODE_MOVE, 
-  OPCODE_GAME_STATE, 
-  OPCODE_GAME_OVER, 
-  OPCODE_START, 
-  OPCODE_DRAW, 
-  OPCODE_PARTNER_LEFT,  
-  OPCODE_SERVER_SHUTDOWN, 
-  NAKAMA_HOST, 
-  NAKAMA_PORT,  
-  NAKAMA_SERVER_KEY 
+import {
+  OPCODE_MOVE,
+  OPCODE_GAME_STATE,
+  OPCODE_GAME_OVER,
+  OPCODE_START,
+  OPCODE_DRAW,
+  OPCODE_PARTNER_LEFT,
+  OPCODE_SERVER_SHUTDOWN,
+  NAKAMA_HOST,
+  NAKAMA_PORT,
+  NAKAMA_SERVER_KEY
 } from "@/constants";
 import { type Board, type MatchRecord } from "@/types";
 import { fetchStats, joinMatchById, createMatch, joinMatch, leaveGame } from "@/lib/helper";
@@ -40,6 +40,7 @@ export default function App() {
   const [summary,      setSummary]      = useState({ wins: 0, losses: 0, draws: 0 });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [matchmakerTicket, setMatchmakerTicket] = useState<string | null>(null);
 
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
@@ -104,13 +105,23 @@ export default function App() {
 
       switch (opCode) {
         case OPCODE_START:
+          console.log("Match started:", data);
           setBoard(data.board);
           setMySymbol(session.user_id ? data.playerSymbols[session.user_id] : null);
           setCurrentTurn(data.currentTurn);
+
+          const mySymbol = session?.user_id ? data.playerSymbols[session.user_id] : "N/A";
+          const opponentSymbol = data.opponentId ? data.playerSymbols[data.opponentId] : "N/A";
+
+          console.log(`My symbol: ${mySymbol}, Opponent symbol: ${opponentSymbol}`);
+          console.log(`Current turn: ${data.currentTurn}, My user ID: ${session.user_id}`);
+
+          setStatus("Game on!");
           setStatus("Game on!");
           break;
 
         case OPCODE_GAME_STATE:
+          console.log("Game state update:", data);
           setBoard(data.board);
           setCurrentTurn(data.currentTurn);
           break;
@@ -140,7 +151,28 @@ export default function App() {
           break;
       }
     };
-  }, [socket, session, mySymbol]);
+
+    socket.onmatchmakermatched = async (matched) => {
+      try {
+        console.log("Match found:", matched);
+        setStatus("Opponent found! Joining...");
+
+        // Extract matchId from token BEFORE joining
+        // Token contains matchId — decode it
+        const tokenParts = matched.token.split(".");
+        const tokenBody = JSON.parse(atob(tokenParts[1]));
+        const extractedMatchId = tokenBody.mid;  // mid = matchId inside JWT
+        
+        setMatchId(extractedMatchId);            // ✅ set BEFORE joining
+        setMatchmakerTicket(null);
+
+        await socket.joinMatch(undefined, matched.token);
+      } catch (e) {
+        console.error("Join matched error:", e);
+        setStatus("Failed to join match");
+      }
+    };
+  }, [socket, session]);
 
   // ── Match Actions ────────────────────────────────────────
   const handleJoinMatchById = useCallback((id: string) => {
@@ -158,6 +190,31 @@ export default function App() {
   const handleLeaveGame = useCallback(() => {
     leaveGame();
   }, []);
+
+  const handleFindMatch = useCallback(async () => {
+    if (!socket) return;
+
+    try {
+      const ticket = await socket.addMatchmaker("*", 2, 2, {}, {});
+      setMatchmakerTicket(ticket.ticket);
+      setStatus("Searching for opponent...");
+    } catch (e) {
+      console.error("Find match error:", e);
+      setStatus("Failed to find match");
+    }
+  }, [socket]);
+
+  const handleCancelSearch = useCallback(async () => {
+    if (!socket || !matchmakerTicket) return;
+
+    try {
+      await socket.removeMatchmaker(matchmakerTicket);
+      setMatchmakerTicket(null);
+      setStatus("Ready to play");
+    } catch (e) {
+      console.error("Cancel search error:", e);
+    }
+  }, [socket, matchmakerTicket]);
 
   const makeMove = useCallback((position: number) => {
     if (
@@ -184,8 +241,15 @@ export default function App() {
 
         <SymbolDisplay mySymbol={mySymbol} />
 
-        {!matchId && (
-          <LobbyButtons onCreateMatch={handleCreateMatch} onJoinMatch={handleJoinMatch} />
+        {!matchId && !matchmakerTicket && (
+          <LobbyButtons onCreateMatch={handleCreateMatch} onJoinMatch={handleJoinMatch} onFindMatch={handleFindMatch} />
+        )}
+
+        {!matchId && matchmakerTicket && (
+          <div className="text-center">
+            <p className="text-lg mb-4">{status}</p>
+            <Button onClick={handleCancelSearch}>Cancel Search</Button>
+          </div>
         )}
 
         {matchId && (
@@ -198,7 +262,7 @@ export default function App() {
               onMakeMove={makeMove}
             />
 
-            <TurnStatus winner={winner} isDraw={isDraw} isMyTurn={isMyTurn} />
+            <TurnStatus winner={winner} isDraw={isDraw} isMyTurn={isMyTurn} currentTurn={currentTurn} />
 
             <Button
               variant="ghost"
