@@ -108,7 +108,8 @@ export default function App() {
           const emojis = ['🤖', '👾', '🦄', '🐉', '👻', '🎃'];
           name =
             prompt('Welcome! Enter your display name:') || 'Player_' + userId;
-          name = emojis[Math.floor(Math.random() * emojis.length)] + ' ' + name;
+          name =
+            emojis[Math.floor(Math.random() * emojis.length)] + '  ' + name;
 
           localStorage.setItem('nakama_display_name', name);
         }
@@ -546,17 +547,27 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="text-sm font-medium text-primary mb-10">
-              {isMyTurn
-                ? '🎯 Your Turn'
-                : winner
-                  ? winner === 'You Win'
+            <div className="flex items-center justify-between gap-4 mb-10">
+              <div className="text-sm font-medium text-primary">
+                {winner
+                  ? winner === 'You Win' || winner === mySymbol
                     ? '🏆 You Win!'
-                    : `${winner} Wins!`
+                    : `💀 You Lost! (${winner} Wins)`
                   : isDraw
                     ? '🤝 Draw!'
-                    : '⏳ Waiting for ' +
-                      (currentTurn === session?.user_id ? 'you' : 'opponent')}
+                    : isMyTurn
+                      ? '🎯 Your Turn'
+                      : '⏳ Waiting for opponent...'}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0 h-9"
+                onClick={handleLeaveGame}
+              >
+                <LogOut className="mr-2 size-4" />
+                Leave Game
+              </Button>
             </div>
           </div>
         )}
@@ -585,17 +596,6 @@ export default function App() {
               isDraw={isDraw}
               onMakeMove={makeMove}
             />
-
-            <div className="w-full flex items-center justify-end mt-3">
-              <Button
-                variant="ghost"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0"
-                onClick={handleLeaveGame}
-              >
-                <LogOut className="mr-2 size-4" />
-                Leave Game
-              </Button>
-            </div>
           </>
         )}
       </div>
