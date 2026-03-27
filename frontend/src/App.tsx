@@ -48,6 +48,14 @@ export default function App() {
   const [selectedMatch, setSelectedMatch] = useState<MatchDetail | null>(null);
   const [showReplay, setShowReplay] = useState<boolean>(false);
 
+  const stopSearchTimer = () => {
+    if (searchTimerRef.current !== null) {
+      clearInterval(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+    setSearchTimer(0);
+  };
+
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
@@ -179,7 +187,7 @@ export default function App() {
 
         case OPCODE_PARTNER_LEFT:
           setStatus("Opponent left — You Win! 🏆 Returning to lobby in 3...");
-          setWinner(mySymbol);
+          setWinner("You Win");
           stopSearchTimer();
           setTimeout(() => setStatus("Opponent left — You Win! 🏆 Returning to lobby in 2..."), 1000);
           setTimeout(() => setStatus("Opponent left — You Win! 🏆 Returning to lobby in 1..."), 2000);
@@ -274,14 +282,6 @@ export default function App() {
       stopSearchTimer();
     }
   }, [socket]);
-
-  const stopSearchTimer = () => {
-    if (searchTimerRef.current !== null) {
-      clearInterval(searchTimerRef.current);
-      searchTimerRef.current = null;
-    }
-    setSearchTimer(0);
-  };
 
   const handleCancelSearch = useCallback(async () => {
     if (!socket || !matchmakerTicket) return;
