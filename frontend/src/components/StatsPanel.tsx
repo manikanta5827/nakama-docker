@@ -31,7 +31,7 @@ export function StatsPanel({
   currentUserId
 }: StatsPanelProps) {
   return (
-    <div className="w-full md:w-[380px] h-[40dvh] md:h-full flex flex-col p-6 md:p-8 bg-muted/10 overflow-y-auto border-l border-border shrink-0">
+    <div className="w-full md:w-[380px] flex flex-col p-6 md:p-8 bg-muted/10 border-l border-border shrink-0 md:h-full md:overflow-y-auto">
       <div className="flex justify-between items-center mb-8 shrink-0">
         <div className="flex items-center gap-2 text-base font-bold tracking-tight uppercase">
           <BarChart2 className="size-5 text-primary" />
@@ -51,7 +51,7 @@ export function StatsPanel({
         </Button>
       </div>
 
-      <Tabs defaultValue="stats" className="flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue="stats" className="flex flex-col min-h-0">
         <TabsList className="grid w-full grid-cols-2 mb-6 shrink-0">
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart2 className="size-4" />
@@ -63,7 +63,7 @@ export function StatsPanel({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="stats" className="flex-1 min-h-0 space-y-6">
+        <TabsContent value="stats" className="space-y-6">
           <SummaryCards summary={summary} />
 
           <div className="space-y-4">
@@ -72,7 +72,7 @@ export function StatsPanel({
           </div>
         </TabsContent>
 
-        <TabsContent value="rankings" className="flex-1 min-h-0">
+        <TabsContent value="rankings">
           <RankingsList
             leaderboard={leaderboard}
             loading={loadingLeaderboard}

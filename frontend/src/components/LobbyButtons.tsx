@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 interface LobbyButtonsProps {
   onCreateMatch: () => void;
@@ -6,7 +6,11 @@ interface LobbyButtonsProps {
   onFindMatch: () => void;
 }
 
-export function LobbyButtons({ onCreateMatch, onJoinMatch, onFindMatch }: LobbyButtonsProps) {
+export function LobbyButtons({
+  onCreateMatch,
+  onJoinMatch,
+  onFindMatch,
+}: LobbyButtonsProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs sm:max-w-none sm:justify-center shrink-0">
       <Button
@@ -14,7 +18,7 @@ export function LobbyButtons({ onCreateMatch, onJoinMatch, onFindMatch }: LobbyB
         className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-widest h-14 px-10 shadow-lg"
         onClick={onCreateMatch}
       >
-        Create Match
+        Play with a Friend
       </Button>
       <Button
         variant="outline"
@@ -30,7 +34,7 @@ export function LobbyButtons({ onCreateMatch, onJoinMatch, onFindMatch }: LobbyB
         className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold uppercase tracking-widest h-14 px-10 shadow-lg"
         onClick={onFindMatch}
       >
-        Find Match
+        Play Online with Anyone
       </Button>
     </div>
   );

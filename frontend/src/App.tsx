@@ -30,10 +30,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { LogOut, Copy, Check } from 'lucide-react';
 import { GameHeader } from '@/components/GameHeader';
-
 import { LobbyButtons } from '@/components/LobbyButtons';
 import { GameBoard } from '@/components/GameBoard';
-import { TurnStatus } from '@/components/TurnStatus';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MatchReplay } from '@/components/MatchReplay';
 
@@ -180,39 +178,18 @@ export default function App() {
           );
           setCurrentTurn(data.currentTurn);
 
-          const mySymbol = session?.user_id
-            ? data.playerSymbols[session.user_id]
-            : 'N/A';
-          const opponentSymbol = data.opponentId
-            ? data.playerSymbols[data.opponentId]
-            : 'N/A';
-
-          console.log(
-            `My symbol: ${mySymbol}, Opponent symbol: ${opponentSymbol}`
-          );
-          console.log(
-            `Current turn: ${data.currentTurn}, My user ID: ${session.user_id}`
-          );
-
           const opponentId = Object.keys(data.playerSymbols).find(
             (id) => id !== session.user_id
           );
 
-          console.log('Opponent ID:', opponentId);
           if (opponentId && data.displayNames) {
-            console.log(
-              'Opponent display name:',
-              data.displayNames[opponentId]
-            );
             setOpponentName(data.displayNames[opponentId]);
           }
 
           setStatus('Game on!');
-          setStatus('Game on!');
           break;
 
         case OPCODE_GAME_STATE:
-          console.log('Game state update:', data);
           setBoard(data.board);
           setCurrentTurn(data.currentTurn);
 
@@ -222,52 +199,14 @@ export default function App() {
                 ? 'Your Turn'
                 : "Opponent's Turn"
             );
-          } else {
-            setStatus('Game ongoing');
           }
           break;
 
         case OPCODE_GAME_OVER:
           setBoard(data.board);
           setWinner(data.winnerSymbol);
-          setStatus('Game Over — Returning to lobby in 10...');
+          setStatus('Game Over');
           stopSearchTimer();
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 9...'),
-            1000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 8...'),
-            2000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 7...'),
-            3000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 6...'),
-            4000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 5...'),
-            5000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 4...'),
-            6000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 3...'),
-            7000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 2...'),
-            8000
-          );
-          setTimeout(
-            () => setStatus('Game Over — Returning to lobby in 1...'),
-            9000
-          );
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
           break;
@@ -275,115 +214,16 @@ export default function App() {
         case OPCODE_DRAW:
           setBoard(data.board);
           setIsDraw(true);
-          setStatus('Draw! — Returning to lobby in 10...');
+          setStatus('Draw!');
           stopSearchTimer();
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 9...'),
-            1000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 8...'),
-            2000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 7...'),
-            3000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 6...'),
-            4000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 5...'),
-            5000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 4...'),
-            6000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 3...'),
-            7000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 2...'),
-            8000
-          );
-          setTimeout(
-            () => setStatus('Draw! — Returning to lobby in 1...'),
-            9000
-          );
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
         case OPCODE_PARTNER_LEFT:
-          setStatus('Opponent left — You Win! 🏆 Returning to lobby in 10...');
+          setStatus('Opponent left — You Win! 🏆');
           setWinner('You Win');
           stopSearchTimer();
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 9...'
-              ),
-            1000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 8...'
-              ),
-            2000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 7...'
-              ),
-            3000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 6...'
-              ),
-            4000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 5...'
-              ),
-            5000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 4...'
-              ),
-            6000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 3...'
-              ),
-            7000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 2...'
-              ),
-            8000
-          );
-          setTimeout(
-            () =>
-              setStatus(
-                'Opponent left — You Win! 🏆 Returning to lobby in 1...'
-              ),
-            9000
-          );
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
           break;
@@ -399,8 +239,6 @@ export default function App() {
         console.log('Match found:', matched);
         setStatus('Opponent found! Joining...');
 
-        // Nakama matchmaker matched may provide match_id directly.
-        // Fallback to token decode if available.
         let joinedMatchId = matched.match_id ?? null;
 
         if (!joinedMatchId && matched.token) {
@@ -417,7 +255,7 @@ export default function App() {
           );
         }
 
-        setMatchId(joinedMatchId); // ✅ set BEFORE joining
+        setMatchId(joinedMatchId);
         setMatchmakerTicket(null);
         stopSearchTimer();
 
@@ -428,7 +266,7 @@ export default function App() {
         stopSearchTimer();
       }
     };
-  }, [socket, session]);
+  }, [socket, session, client, handleFetchStats]);
 
   useEffect(() => {
     return () => {
@@ -464,12 +302,12 @@ export default function App() {
       setMatchmakerTicket(ticket.ticket);
 
       let timer = 1;
-      setStatus('Searching for opponent… 1');
+      setStatus('Searching... 1');
 
       stopSearchTimer();
       searchTimerRef.current = window.setInterval(() => {
         timer += 1;
-        setStatus(`Searching for opponent… ${timer}`);
+        setStatus(`Searching... ${timer}`);
       }, 1000);
     } catch (e) {
       console.error('Find match error:', e);
@@ -511,44 +349,53 @@ export default function App() {
   const isMyTurn = currentTurn === session?.user_id;
 
   return (
-    <div className="flex flex-col md:flex-row h-[100dvh] bg-background text-foreground font-sans dark overflow-y-auto">
-      {/* ── Left Panel: Game ── */}
-      <div className="flex-1 flex flex-col items-center justify-start pt-8 md:pt-12 p-6 md:p-10 border-b md:border-b-0 md:border-r border-border overflow-y-auto min-h-0">
+    <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden bg-background text-foreground font-sans dark">
+      {/* ── Left Panel: Game area ── */}
+      <div className="flex-1 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 border-b md:border-b-0 md:border-r border-border md:overflow-y-auto">
         <GameHeader displayName={displayName} status={status} />
 
         {matchId && (
-          <div className="w-full space-y-2 mt-3">
-            <div className="w-full flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="font-semibold">{displayName ?? 'You'}</span>
-                <span>vs</span>
-                <span className="font-semibold">
-                  {opponentName ?? 'Waiting...'}
-                </span>
-                <span className="pl-2">
-                  You are <strong>{mySymbol ?? '-'}</strong>
-                </span>
+          <div className="w-full max-w-md space-y-4 mb-8">
+            <div className="flex flex-col gap-2 p-4 bg-muted/20 rounded-xl border border-border">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-primary">{displayName ?? 'You'}</span>
+                  <span className="text-muted-foreground">vs</span>
+                  <span className="font-semibold">{opponentName ?? 'Waiting...'}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  You are <span className="text-primary font-black ml-1">{mySymbol ?? '-'}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Match ID:</span>
-                <code className="text-primary font-mono text-xs">
-                  {matchId.substring(0, 12)}...
-                </code>
-                <button
-                  onClick={copyMatchIdToClipboard}
-                  className="p-1 hover:bg-muted rounded transition-colors"
-                  title="Copy Match ID"
+
+              <div className="flex items-center justify-between gap-4 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                  <span>{matchId.substring(0, 12)}...</span>
+                  <button
+                    onClick={copyMatchIdToClipboard}
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                  >
+                    {matchIdCopied ? (
+                      <Check className="size-3 text-green-500" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground hover:text-destructive h-7"
+                  onClick={handleLeaveGame}
                 >
-                  {matchIdCopied ? (
-                    <Check className="size-4 text-green-500" />
-                  ) : (
-                    <Copy className="size-4" />
-                  )}
-                </button>
+                  <LogOut className="mr-1.5 size-3" />
+                  Leave
+                </Button>
               </div>
             </div>
-            <div className="flex items-center justify-between gap-4 mb-10">
-              <div className="text-sm font-medium text-primary">
+
+            <div className="flex items-center justify-center p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <span className="text-sm font-bold text-primary uppercase tracking-wider">
                 {winner
                   ? winner === 'You Win' || winner === mySymbol
                     ? '🏆 You Win!'
@@ -558,37 +405,40 @@ export default function App() {
                     : isMyTurn
                       ? '🎯 Your Turn'
                       : '⏳ Waiting for opponent...'}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border transition-all shrink-0 h-9"
-                onClick={handleLeaveGame}
-              >
-                <LogOut className="mr-2 size-4" />
-                Leave Game
-              </Button>
+              </span>
             </div>
           </div>
         )}
 
         {!matchId && !matchmakerTicket && (
-          <LobbyButtons
-            onCreateMatch={handleCreateMatch}
-            onJoinMatch={handleJoinMatch}
-            onFindMatch={handleFindMatch}
-          />
+          <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm min-h-[300px]">
+            <LobbyButtons
+              onCreateMatch={handleCreateMatch}
+              onJoinMatch={handleJoinMatch}
+              onFindMatch={handleFindMatch}
+            />
+          </div>
         )}
 
         {!matchId && matchmakerTicket && (
-          <div className="text-center">
-            <p className="text-lg mb-4">{status}</p>
-            <Button onClick={handleCancelSearch}>Cancel Search</Button>
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 min-h-[300px]">
+            <div className="space-y-2">
+              <p className="text-2xl font-black text-primary animate-pulse">{status}</p>
+              <p className="text-sm text-muted-foreground uppercase tracking-[0.2em]">Finding an opponent</p>
+            </div>
+            <Button
+              variant="outline"
+              size="lg"
+              className="px-10 border-destructive text-destructive hover:bg-destructive/10"
+              onClick={handleCancelSearch}
+            >
+              Cancel Search
+            </Button>
           </div>
         )}
 
         {matchId && (
-          <>
+          <div className="flex-1 flex flex-col items-center justify-center w-full py-4 min-h-[400px]">
             <GameBoard
               board={board}
               isMyTurn={isMyTurn}
@@ -596,7 +446,7 @@ export default function App() {
               isDraw={isDraw}
               onMakeMove={makeMove}
             />
-          </>
+          </div>
         )}
       </div>
 
@@ -612,6 +462,7 @@ export default function App() {
         onRefreshLeaderboard={handleFetchLeaderboard}
         currentUserId={session?.user_id}
       />
+
       {showReplay && selectedMatch && (
         <MatchReplay
           matchDetail={selectedMatch}
