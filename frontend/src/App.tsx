@@ -13,6 +13,7 @@ import {
   NAKAMA_HOST,
   NAKAMA_PORT,
   NAKAMA_SERVER_KEY,
+  NAKAMA_SSL,
 } from '@/constants';
 import {
   type Board,
@@ -100,7 +101,7 @@ export default function App() {
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const newClient = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT);
+      const newClient = new Client( NAKAMA_HOST, NAKAMA_PORT);
       setClient(newClient);
 
       let deviceId = localStorage.getItem('nakama_device_id');
@@ -121,19 +122,50 @@ export default function App() {
         if (!name || name === 'null' || name === 'undefined') {
           console.log('No display name found, prompting user...');
           const indianNames = [
-            'Arjun', 'Aditya', 'Aarav', 'Vihaan', 'Reyansh', 'Ishaan', 'Sai', 'Krishna',
-            'Ananya', 'Diya', 'Aadhya', 'Saanvi', 'Myra', 'Kavya', 'Pari', 'Zara',
-            'Rahul', 'Rohit', 'Amit', 'Vikram', 'Priya', 'Neha', 'Sneha', 'Anjali',
-            'Ishan', 'Karan', 'Meera', 'Riya', 'Siddharth', 'Varun'
+            'Arjun',
+            'Aditya',
+            'Aarav',
+            'Vihaan',
+            'Reyansh',
+            'Ishaan',
+            'Sai',
+            'Krishna',
+            'Ananya',
+            'Diya',
+            'Aadhya',
+            'Saanvi',
+            'Myra',
+            'Kavya',
+            'Pari',
+            'Zara',
+            'Rahul',
+            'Rohit',
+            'Amit',
+            'Vikram',
+            'Priya',
+            'Neha',
+            'Sneha',
+            'Anjali',
+            'Ishan',
+            'Karan',
+            'Meera',
+            'Riya',
+            'Siddharth',
+            'Varun',
           ];
-          
+
           const userInput = prompt('Welcome! Enter your display name:');
-          const randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
-          
-          name = (userInput && userInput.trim().length > 0) ? userInput.trim() : `${randomName}`;
-          
+          const randomName =
+            indianNames[Math.floor(Math.random() * indianNames.length)];
+
+          name =
+            userInput && userInput.trim().length > 0
+              ? userInput.trim()
+              : `${randomName}`;
+
           const emojis = ['🤖', '👾', '🦄', '🐉', '👻', '🎃', '⭐', '🔥', '💎'];
-          name = emojis[Math.floor(Math.random() * emojis.length)] + '  ' + name;
+          name =
+            emojis[Math.floor(Math.random() * emojis.length)] + '  ' + name;
 
           localStorage.setItem('nakama_display_name', name);
         } else {
@@ -143,7 +175,7 @@ export default function App() {
 
         await newClient.updateAccount(newSession, { display_name: name });
 
-        const newSocket = newClient.createSocket();
+        const newSocket = newClient.createSocket(NAKAMA_SSL, false);
         await newSocket.connect(newSession, true);
         setSocket(newSocket);
         setStatus('Ready to play');
@@ -417,12 +449,19 @@ export default function App() {
             <div className="flex flex-col gap-2 p-4 bg-muted/20 rounded-xl border border-border">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-primary">{displayName ?? 'You'}</span>
+                  <span className="font-semibold text-primary">
+                    {displayName ?? 'You'}
+                  </span>
                   <span className="text-muted-foreground">vs</span>
-                  <span className="font-semibold">{opponentName ?? 'Waiting...'}</span>
+                  <span className="font-semibold">
+                    {opponentName ?? 'Waiting...'}
+                  </span>
                 </div>
                 <div className="text-muted-foreground">
-                  You are <span className="text-primary font-black ml-1">{mySymbol ?? '-'}</span>
+                  You are{' '}
+                  <span className="text-primary font-black ml-1">
+                    {mySymbol ?? '-'}
+                  </span>
                 </div>
               </div>
 
@@ -467,18 +506,27 @@ export default function App() {
                 </span>
                 {refreshCountdown !== null ? (
                   <span className="text-xs text-muted-foreground mt-1 font-medium">
-                    Returning to lobby in <span className="text-primary font-bold">{refreshCountdown}s</span>...
+                    Returning to lobby in{' '}
+                    <span className="text-primary font-bold">
+                      {refreshCountdown}s
+                    </span>
+                    ...
                   </span>
-                ) : matchId && secondsRemaining !== null && !winner && !isDraw && (
-                  <span
-                    className={`text-xs font-mono ${
-                      secondsRemaining <= 10
-                        ? 'text-destructive animate-pulse'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    Time Remaining: {secondsRemaining}s
-                  </span>
+                ) : (
+                  matchId &&
+                  secondsRemaining !== null &&
+                  !winner &&
+                  !isDraw && (
+                    <span
+                      className={`text-xs font-mono ${
+                        secondsRemaining <= 10
+                          ? 'text-destructive animate-pulse'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      Time Remaining: {secondsRemaining}s
+                    </span>
+                  )
                 )}
               </div>
             </div>
@@ -498,8 +546,12 @@ export default function App() {
         {!matchId && matchmakerTicket && (
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 min-h-[300px]">
             <div className="space-y-2">
-              <p className="text-2xl font-black text-primary animate-pulse">{status}</p>
-              <p className="text-sm text-muted-foreground uppercase tracking-[0.2em]">Finding an opponent</p>
+              <p className="text-2xl font-black text-primary animate-pulse">
+                {status}
+              </p>
+              <p className="text-sm text-muted-foreground uppercase tracking-[0.2em]">
+                Finding an opponent
+              </p>
             </div>
             <Button
               variant="outline"
