@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: nakama-local
+    image: manikantathummuri519/nakama-local:latest
     entrypoint:
       - "/bin/sh"
       - "-ecx"
