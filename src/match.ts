@@ -676,7 +676,14 @@ export function matchmakerMatched(
   nk: nkruntime.Nakama,
   matches: nkruntime.MatchmakerResult[]
 ): string | void {
-  const userIds = matches.map((m) => m.presence.userId).join(',');
+  // sorts by start_time to ensure first clicker gets index 0
+  const sortedMatches = matches.sort((a, b) => {
+    const timeA = Number(a.properties['start_time']) || 0;
+    const timeB = Number(b.properties['start_time']) || 0;
+    return timeA - timeB;
+  });
+
+  const userIds = sortedMatches.map((m) => m.presence.userId).join(',');
   const matchId = nk.matchCreate(MODULE_NAME, { userIds });
   logger.info('matchmaker matched, created: %s', matchId);
   return matchId;
