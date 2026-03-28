@@ -2,6 +2,10 @@
   "name": "nakama-docker",
   "version": "1.0.0",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manikanta5827/nakama-docker.git"
+  },
   "main": "index.js",
  "scripts": {
   "build": "rollup -c rollup.config.mjs",
