@@ -62,6 +62,7 @@ export default function App() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [matchIdCopied, setMatchIdCopied] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [refreshCountdown, setRefreshCountdown] = useState<number | null>(null);
 
   const stopSearchTimer = () => {
     if (searchTimerRef.current !== null) {
@@ -69,6 +70,21 @@ export default function App() {
       searchTimerRef.current = null;
     }
   };
+
+  useEffect(() => {
+    if (refreshCountdown === null) return;
+
+    if (refreshCountdown <= 0) {
+      window.location.reload();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setRefreshCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [refreshCountdown]);
 
   const copyMatchIdToClipboard = async () => {
     if (!matchId) return;
@@ -212,7 +228,7 @@ export default function App() {
           setStatus('Game Over');
           setSecondsRemaining(null);
           stopSearchTimer();
-          setTimeout(() => window.location.reload(), 10000);
+          setRefreshCountdown(10);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
@@ -222,7 +238,7 @@ export default function App() {
           setStatus('Draw!');
           setSecondsRemaining(null);
           stopSearchTimer();
-          setTimeout(() => window.location.reload(), 10000);
+          setRefreshCountdown(10);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
@@ -231,7 +247,7 @@ export default function App() {
           setWinner('You Win');
           setSecondsRemaining(null);
           stopSearchTimer();
-          setTimeout(() => window.location.reload(), 10000);
+          setRefreshCountdown(10);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
@@ -245,7 +261,7 @@ export default function App() {
             setWinner(data.winnerSymbol || 'Opponent');
           }
           setSecondsRemaining(null);
-          setTimeout(() => window.location.reload(), 10000);
+          setRefreshCountdown(10);
           setTimeout(() => handleFetchStats(), 500);
           break;
 
@@ -323,7 +339,15 @@ export default function App() {
     if (!socket) return;
 
     try {
-      const ticket = await socket.addMatchmaker('*', 2, 2, {}, {});
+      const ticket = await socket.addMatchmaker(
+        '*',
+        2,
+        2,
+        {
+          start_time: Date.now().toString(),
+        },
+        {}
+      );
       setMatchmakerTicket(ticket.ticket);
 
       let timer = 1;
@@ -432,7 +456,11 @@ export default function App() {
                         ? '🎯 Your Turn'
                         : '⏳ Waiting for opponent...'}
                 </span>
-                {matchId && secondsRemaining !== null && !winner && !isDraw && (
+                {refreshCountdown !== null ? (
+                  <span className="text-xs text-muted-foreground mt-1 font-medium">
+                    Returning to lobby in <span className="text-primary font-bold">{refreshCountdown}s</span>...
+                  </span>
+                ) : matchId && secondsRemaining !== null && !winner && !isDraw && (
                   <span
                     className={`text-xs font-mono ${
                       secondsRemaining <= 10
