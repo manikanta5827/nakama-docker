@@ -101,7 +101,7 @@ export default function App() {
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const newClient = new Client( NAKAMA_HOST, NAKAMA_PORT);
+      const newClient = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT, NAKAMA_SSL);
       setClient(newClient);
 
       let deviceId = localStorage.getItem('nakama_device_id');

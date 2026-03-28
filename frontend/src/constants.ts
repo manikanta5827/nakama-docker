@@ -8,9 +8,10 @@ export const OPCODE_SERVER_SHUTDOWN = 7;
 export const OPCODE_TIMEOUT = 8;
 export const OPCODE_TIMER_UPDATE = 9;
 
-export const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || "localhost";
-export const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || "7350";
-export const NAKAMA_SSL = import.meta.env.VITE_NAKAMA_SSL === "true";
-export const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || "defaultkey";
+export const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'localhost';
+export const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '7350';
+export const NAKAMA_SSL = import.meta.env.VITE_NAKAMA_SSL === 'true';
+export const NAKAMA_SERVER_KEY =
+  import.meta.env.VITE_NAKAMA_SERVER_KEY || 'defaultkey';
 
-export const MODULE_NAME = "tictactoe";
+export const MODULE_NAME = 'tictactoe';
