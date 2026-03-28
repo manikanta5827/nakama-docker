@@ -29,7 +29,7 @@ function saveMatchResult(
   finalBoard: any[]
 ): void {
   try {
-    logger.info('saving match result for %s and %s', player1Id, player2Id);
+    logger.info('saving match result for %s and %s , results: %s, %s', player1Id, player2Id, player1Result, player2Result);
     const timestamp = Date.now();
 
     const writeForPlayer = (
@@ -86,7 +86,7 @@ function saveMatchResult(
 
       // saves summary and match record
       try {
-        nk.storageWrite([
+        const res = nk.storageWrite([
           {
             collection: 'stats',
             key: 'summary',
@@ -115,6 +115,9 @@ function saveMatchResult(
             permissionWrite: 0,
           },
         ]);
+
+        logger.info('storage write result for %s: %s', userId, JSON.stringify(res));
+        logger.info('match result saved for %s, result: %s, reason: %s', userId, result, reason);
       } catch (error) {
         logger.error('storage write error: %s', JSON.stringify(error));
       }
@@ -393,7 +396,7 @@ export function matchLoop(
           playerIds[1],
           'draw',
           'draw',
-          '',
+          REASON_NORMAL,
           state.matchId,
           state.moves,
           state.board
