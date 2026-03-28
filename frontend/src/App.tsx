@@ -8,6 +8,8 @@ import {
   OPCODE_DRAW,
   OPCODE_PARTNER_LEFT,
   OPCODE_SERVER_SHUTDOWN,
+  OPCODE_TIMEOUT,
+  OPCODE_TIMER_UPDATE,
   NAKAMA_HOST,
   NAKAMA_PORT,
   NAKAMA_SERVER_KEY,
@@ -59,6 +61,7 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [matchIdCopied, setMatchIdCopied] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const stopSearchTimer = () => {
     if (searchTimerRef.current !== null) {
@@ -177,6 +180,7 @@ export default function App() {
             session.user_id ? data.playerSymbols[session.user_id] : null
           );
           setCurrentTurn(data.currentTurn);
+          setSecondsRemaining(null);
 
           const opponentId = Object.keys(data.playerSymbols).find(
             (id) => id !== session.user_id
@@ -206,6 +210,7 @@ export default function App() {
           setBoard(data.board);
           setWinner(data.winnerSymbol);
           setStatus('Game Over');
+          setSecondsRemaining(null);
           stopSearchTimer();
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
@@ -215,6 +220,7 @@ export default function App() {
           setBoard(data.board);
           setIsDraw(true);
           setStatus('Draw!');
+          setSecondsRemaining(null);
           stopSearchTimer();
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
@@ -223,9 +229,28 @@ export default function App() {
         case OPCODE_PARTNER_LEFT:
           setStatus('Opponent left — You Win! 🏆');
           setWinner('You Win');
+          setSecondsRemaining(null);
           stopSearchTimer();
           setTimeout(() => window.location.reload(), 10000);
           setTimeout(() => handleFetchStats(), 500);
+          break;
+
+        case OPCODE_TIMEOUT:
+          setBoard(data.board);
+          if (data.winner === session?.user_id) {
+            setStatus('Opponent timed out — You Win! ⏰🏆');
+            setWinner('You Win');
+          } else {
+            setStatus('You ran out of time — You Lose ⏰');
+            setWinner(data.winnerSymbol || 'Opponent');
+          }
+          setSecondsRemaining(null);
+          setTimeout(() => window.location.reload(), 10000);
+          setTimeout(() => handleFetchStats(), 500);
+          break;
+
+        case OPCODE_TIMER_UPDATE:
+          setSecondsRemaining(data.secondsRemaining);
           break;
 
         case OPCODE_SERVER_SHUTDOWN:
@@ -395,17 +420,30 @@ export default function App() {
             </div>
 
             <div className="flex items-center justify-center p-3 bg-primary/5 rounded-lg border border-primary/10">
-              <span className="text-sm font-bold text-primary uppercase tracking-wider">
-                {winner
-                  ? winner === 'You Win' || winner === mySymbol
-                    ? '🏆 You Win!'
-                    : `💀 You Lost! (${winner} Wins)`
-                  : isDraw
-                    ? '🤝 Draw!'
-                    : isMyTurn
-                      ? '🎯 Your Turn'
-                      : '⏳ Waiting for opponent...'}
-              </span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-bold text-primary uppercase tracking-wider">
+                  {winner
+                    ? winner === 'You Win' || winner === mySymbol
+                      ? '🏆 You Win!'
+                      : `💀 You Lost! (${winner} Wins)`
+                    : isDraw
+                      ? '🤝 Draw!'
+                      : isMyTurn
+                        ? '🎯 Your Turn'
+                        : '⏳ Waiting for opponent...'}
+                </span>
+                {matchId && secondsRemaining !== null && !winner && !isDraw && (
+                  <span
+                    className={`text-xs font-mono ${
+                      secondsRemaining <= 10
+                        ? 'text-destructive animate-pulse'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Time Remaining: {secondsRemaining}s
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
