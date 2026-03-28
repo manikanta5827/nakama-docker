@@ -118,17 +118,26 @@ export default function App() {
         }
 
         let name = localStorage.getItem('nakama_display_name');
-        if (!name) {
-          const userId = newSession.user_id
-            ? newSession.user_id.substring(0, 5)
-            : 'guest';
-          const emojis = ['🤖', '👾', '🦄', '🐉', '👻', '🎃'];
-          name =
-            prompt('Welcome! Enter your display name:') || 'Player_' + userId;
-          name =
-            emojis[Math.floor(Math.random() * emojis.length)] + '  ' + name;
+        if (!name || name === 'null' || name === 'undefined') {
+          console.log('No display name found, prompting user...');
+          const indianNames = [
+            'Arjun', 'Aditya', 'Aarav', 'Vihaan', 'Reyansh', 'Ishaan', 'Sai', 'Krishna',
+            'Ananya', 'Diya', 'Aadhya', 'Saanvi', 'Myra', 'Kavya', 'Pari', 'Zara',
+            'Rahul', 'Rohit', 'Amit', 'Vikram', 'Priya', 'Neha', 'Sneha', 'Anjali',
+            'Ishan', 'Karan', 'Meera', 'Riya', 'Siddharth', 'Varun'
+          ];
+          
+          const userInput = prompt('Welcome! Enter your display name:');
+          const randomName = indianNames[Math.floor(Math.random() * indianNames.length)];
+          
+          name = (userInput && userInput.trim().length > 0) ? userInput.trim() : `${randomName}`;
+          
+          const emojis = ['🤖', '👾', '🦄', '🐉', '👻', '🎃', '⭐', '🔥', '💎'];
+          name = emojis[Math.floor(Math.random() * emojis.length)] + '  ' + name;
 
           localStorage.setItem('nakama_display_name', name);
+        } else {
+          console.log('Using existing display name:', name);
         }
         setDisplayName(name);
 
