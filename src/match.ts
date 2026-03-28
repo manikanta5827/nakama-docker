@@ -7,8 +7,12 @@ import {
   OPCODE_DRAW,
   OPCODE_SERVER_SHUTDOWN,
   OPCODE_PARTNER_LEFT,
+  OPCODE_TIMEOUT,
+  OPCODE_TIMER_UPDATE,
   REASON_NORMAL,
   REASON_PARTNER_LEFT,
+  REASON_TIMEOUT,
+  TURN_TIMEOUT_SECONDS,
 } from './constants';
 
 // writes match results to storage and updates leaderboard
@@ -140,6 +144,9 @@ export function matchInit(
     winner: null,
     matchId: ctx.matchId.split('.')[0],
     moves: [],
+    turnStartTick: 0,
+    timeoutTicks: TURN_TIMEOUT_SECONDS * 5,
+    presencesOrder: params['userIds'] ? params['userIds'].split(',') : [],
   };
 
   return {
@@ -189,12 +196,25 @@ export function matchJoin(
 ): { state: nkruntime.MatchState } | null {
   presences.forEach(function (presence) {
     state.players[presence.userId] = presence;
-    const playerCount = Object.keys(state.players).length;
-    state.playerSymbols[presence.userId] = playerCount === 1 ? 'X' : 'O';
+
+    if (state.presencesOrder && state.presencesOrder.length > 0) {
+      const index = state.presencesOrder.indexOf(presence.userId);
+      if (index !== -1) {
+        state.playerSymbols[presence.userId] = index === 0 ? 'X' : 'O';
+      } else {
+        const playerCount = Object.keys(state.players).length;
+        state.playerSymbols[presence.userId] = playerCount === 1 ? 'X' : 'O';
+      }
+    } else {
+      const playerCount = Object.keys(state.players).length;
+      state.playerSymbols[presence.userId] = playerCount === 1 ? 'X' : 'O';
+    }
+
     logger.info('player joined: %s', presence.userId);
   });
 
   const playerCount = Object.keys(state.players).length;
+
   if (playerCount === 2) {
 
     // fetches player display names
@@ -211,6 +231,7 @@ export function matchJoin(
     });
 
     state.currentTurn = xPlayerId || null;
+    state.turnStartTick = tick;
     logger.info('game starting, turn: %s', state.currentTurn);
 
     // broadcasts start message
@@ -241,6 +262,61 @@ export function matchLoop(
   messages: nkruntime.MatchMessage[]
 ): { state: nkruntime.MatchState } | null {
   if (state.gameOver) return null;
+
+  // check timeout at top of every tick
+  if (state.currentTurn && Object.keys(state.players).length === 2) {
+    const ticksElapsed = tick - state.turnStartTick;
+
+    // calculates remaining time and broadcasts timer update
+    const ticksRemaining = state.timeoutTicks - ticksElapsed;
+    const secondsRemaining = Math.ceil(ticksRemaining / 5);
+
+    if (ticksElapsed >= state.timeoutTicks) {
+      state.gameOver = true;
+      const playerIds = Object.keys(state.players);
+      const timedOutId = state.currentTurn;
+      const winnerId = playerIds.find((id) => id !== timedOutId) || '';
+
+      logger.info('player %s timed out - %s wins', timedOutId, winnerId);
+
+      saveMatchResult(
+        nk,
+        logger,
+        winnerId,
+        timedOutId,
+        'win',
+        'loss',
+        REASON_TIMEOUT,
+        state.matchId,
+        state.moves,
+        state.board
+      );
+
+      dispatcher.broadcastMessage(
+        OPCODE_TIMEOUT,
+        JSON.stringify({
+          timedOutPlayer: timedOutId,
+          winner: winnerId,
+          board: state.board,
+        }),
+        null,
+        null
+      );
+
+      return null;
+    }
+
+    // broadcast timer update every tick
+    dispatcher.broadcastMessage(
+      OPCODE_TIMER_UPDATE,
+      JSON.stringify({
+        currentTurn: state.currentTurn,
+        secondsRemaining: secondsRemaining,
+      }),
+      null,
+      null
+    );
+  }
 
   messages.forEach(function (message) {
     try {
@@ -334,6 +410,8 @@ export function matchLoop(
 
       // switches turns and broadcasts state
       state.currentTurn = opponentId;
+      state.turnStartTick = tick;
+
       dispatcher.broadcastMessage(
         OPCODE_GAME_STATE,
         JSON.stringify({
@@ -598,7 +676,8 @@ export function matchmakerMatched(
   nk: nkruntime.Nakama,
   matches: nkruntime.MatchmakerResult[]
 ): string | void {
-  const matchId = nk.matchCreate(MODULE_NAME, {});
+  const userIds = matches.map((m) => m.presence.userId).join(',');
+  const matchId = nk.matchCreate(MODULE_NAME, { userIds });
   logger.info('matchmaker matched, created: %s', matchId);
   return matchId;
 }
