@@ -37,6 +37,7 @@ import { LobbyButtons } from '@/components/LobbyButtons';
 import { GameBoard } from '@/components/GameBoard';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MatchReplay } from '@/components/MatchReplay';
+import { InstallPrompt } from './components/InstallPrompt';
 
 // ── Main Component ─────────────────────────────────────────
 export default function App() {
@@ -101,7 +102,12 @@ export default function App() {
   // ── Init Nakama ──────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const newClient = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT, NAKAMA_SSL);
+      const newClient = new Client(
+        NAKAMA_SERVER_KEY,
+        NAKAMA_HOST,
+        NAKAMA_PORT,
+        NAKAMA_SSL
+      );
       setClient(newClient);
 
       let deviceId = localStorage.getItem('nakama_device_id');
@@ -596,6 +602,8 @@ export default function App() {
           onClose={() => setShowReplay(false)}
         />
       )}
+
+      <InstallPrompt />
     </div>
   );
 }
