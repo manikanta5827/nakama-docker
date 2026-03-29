@@ -2,10 +2,14 @@
 
 This document outlines key engineering choices made during the development of the Tic-Tac-Toe server.
 
-## 1. Dual-Record Result Storage
-Nakama storage collections for matches are structured to ensure high performance and easy retrieval on the frontend.
-- **Decision**: For every finished match, two identical records are created—one under each player's `userId`.
-- **Rationale**: Since Nakama's storage system is not a traditional relational database (SQL), querying for "all matches where I was a participant" (either as player 1 or player 2) would require complex filtering. By duplicating the record, each user's dashboard can simply query their own `match_*` collection keys to display their personal history and stats instantly.
+## 1. 3-Record Event-Based Storage
+Nakama storage collections are optimized to balance data integrity, storage efficiency, and runtime performance.
+- **Decision**: Every finished match creates three distinct records and updates an atomic summary.
+- **Structure**:
+    - **Global Detail**: A single heavy record (`match_detail_{id}`) containing move sequences and the final board state is saved under a system-owned `userId: null`. This is the single source of truth for replays.
+    - **History Pointers**: Two lightweight metadata records (`match_h_{id}`) are saved—one for each player—containing only IDs, relative results, and timestamps for history listing.
+    - **Atomic Summary**: A per-user `summary` record tracks total `[wins, losses, draws]`. This is updated using Nakama's **CAS (Compare-and-Swap)** versioning, ensuring accuracy even if multiple matches end simultaneously.
+- **Rationale**: This separates "Heavy" replay data from "Light" history metadata. It eliminates data redundancy (moves aren't stored twice) and ensures the dashboard loads instantly by avoiding heavy JSON parsing until a user specifically requests a replay. Furthermore, names are resolved at runtime via `nk.usersGetId`, ensuring the history always displays current usernames.
 
 ## 2. Order Preservation in Matchmaking
 To ensure fair role assignment (X vs O) during automatic pairing:
