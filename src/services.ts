@@ -52,100 +52,113 @@ export function saveMatchResult(
     logger.info('saving match result for %s and %s , results: %s, %s', player1Id, player2Id, player1Result, player2Result);
     const timestamp = Date.now();
 
-    const writeForPlayer = (
-      userId: string,
-      opponentId: string,
-      result: string
-    ) => {
-      let summary = { wins: 0, losses: 0, draws: 0 };
+    // 1. Batch Read summaries for CAS
+    const summaries = nk.storageRead([
+      { collection: 'stats', key: 'summary', userId: player1Id },
+      { collection: 'stats', key: 'summary', userId: player2Id },
+    ]);
 
-      try {
-        // reads existing player summary
-        const existing = nk.storageRead([
-          {
-            collection: 'stats',
-            key: 'summary',
-            userId: userId,
-          },
-        ]);
-
-        if (existing && existing.length > 0) {
-          const rawValue = existing[0].value;
-          if (rawValue) {
-            summary = {
-              wins: Number(rawValue.wins) || 0,
-              losses: Number(rawValue.losses) || 0,
-              draws: Number(rawValue.draws) || 0,
-            };
-          }
-        }
-      } catch (e) {
-        logger.warn('no summary found for %s', userId);
-      }
-
-      // updates summary totals
-      if (result === 'win') summary.wins += 1;
-      if (result === 'loss') summary.losses += 1;
-      if (result === 'draw') summary.draws += 1;
-
-      // updates global leaderboard on win
-      if (result === 'win') {
-        try {
-          nk.leaderboardRecordWrite(
-            'global_wins',
-            userId,
-            '',
-            100,
-            0,
-            {}
-          );
-        } catch (error) {
-          logger.error('leaderboard write failed: %s', error.message);
-        }
-      }
-
-      // saves summary and match record
-      try {
-        nk.storageWrite([
-          {
-            collection: 'stats',
-            key: 'summary',
-            userId: userId,
-            value: {
-              wins: summary.wins,
-              losses: summary.losses,
-              draws: summary.draws,
-            } as any,
-            permissionRead: 1,
-            permissionWrite: 0,
-          },
-          {
-            collection: 'stats',
-            key: 'match_' + matchId,
-            userId: userId,
-            value: {
-              result: String(result),
-              reason: String(reason),
-              opponent: String(opponentId),
-              timestamp: Number(timestamp),
-              moves: moves,
-              finalBoard: finalBoard,
-            } as any,
-            permissionRead: 1,
-            permissionWrite: 0,
-          },
-        ]);
-
-        logger.info('match result saved for %s, result: %s, reason: %s', userId, result, reason);
-      } catch (error) {
-        logger.error('storage write error: %s', JSON.stringify(error));
-      }
+    const getSummary = (userId: string) => {
+      const record = summaries.find((r) => r.userId === userId);
+      return {
+        value: record ? (record.value as any) : { wins: 0, losses: 0, draws: 0 },
+        version: record ? record.version : '*',
+      };
     };
 
-    writeForPlayer(player1Id, player2Id, player1Result);
-    writeForPlayer(player2Id, player1Id, player2Result);
+    const s1 = getSummary(player1Id);
+    const s2 = getSummary(player2Id);
+
+    const increment = (val: any, result: string) => {
+      const newVal = {
+        wins: Number(val.wins) || 0,
+        losses: Number(val.losses) || 0,
+        draws: Number(val.draws) || 0,
+      };
+      if (result === 'win') newVal.wins++;
+      else if (result === 'loss') newVal.losses++;
+      else if (result === 'draw') newVal.draws++;
+      return newVal;
+    };
+
+    const writes: nkruntime.StorageWriteRequest[] = [
+      // 1. ATOMIC SUMMARIES (CAS)
+      {
+        collection: 'stats',
+        key: 'summary',
+        userId: player1Id,
+        value: increment(s1.value, player1Result),
+        version: s1.version,
+        permissionRead: 1,
+        permissionWrite: 0,
+      },
+      {
+        collection: 'stats',
+        key: 'summary',
+        userId: player2Id,
+        value: increment(s2.value, player2Result),
+        version: s2.version,
+        permissionRead: 1,
+        permissionWrite: 0,
+      },
+      // 2. GLOBAL HEAVY DETAIL
+      {
+        collection: 'stats',
+        key: 'match_detail_' + matchId,
+        userId: null,
+        value: {
+          matchId,
+          player1Id,
+          player2Id,
+          player1Result,
+          player2Result,
+          reason,
+          moves,
+          finalBoard,
+          timestamp,
+        },
+        permissionRead: 2, // Public read so either player can fetch it
+        permissionWrite: 0,
+      },
+      // 3. PLAYER HISTORY POINTERS
+      {
+        collection: 'stats',
+        key: 'match_h_' + matchId,
+        userId: player1Id,
+        value: {
+          matchId,
+          opponentId: player2Id,
+          result: player1Result,
+          reason,
+          timestamp,
+        },
+        permissionRead: 1,
+        permissionWrite: 0,
+      },
+      {
+        collection: 'stats',
+        key: 'match_h_' + matchId,
+        userId: player2Id,
+        value: {
+          matchId,
+          opponentId: player1Id,
+          result: player2Result,
+          reason,
+          timestamp,
+        },
+        permissionRead: 1,
+        permissionWrite: 0,
+      },
+    ];
+
+    nk.storageWrite(writes);
+
+    if (player1Result === 'win') nk.leaderboardRecordWrite('global_wins', player1Id, '', 100, 0, {});
+    if (player2Result === 'win') nk.leaderboardRecordWrite('global_wins', player2Id, '', 100, 0, {});
+
+    logger.info('Match %s results saved (IDs only for consistency)', matchId);
   } catch (error) {
-    logger.error('error saving match result: %s', JSON.stringify(error));
+    logger.error('Failed to save match result: %s', error.message);
   }
 }
 
@@ -171,47 +184,41 @@ export function getUserStats(
   userId: string
 ): { summary: any; matchHistory: any[] } {
   let summary = { wins: 0, losses: 0, draws: 0 };
-
-  try {
-    const summaryRead = nk.storageRead([
-      { collection: 'stats', key: 'summary', userId: userId },
-    ]);
-    if (summaryRead && summaryRead.length > 0) {
-      const rawSummary = summaryRead[0].value;
-      summary = {
-        wins: Number(rawSummary.wins) || 0,
-        losses: Number(rawSummary.losses) || 0,
-        draws: Number(rawSummary.draws) || 0,
-      };
-    }
-  } catch (e) {
-    logger.warn('no summary found for %s', userId);
-  }
-
   let matchHistory: any[] = [];
+
   try {
-    const matchRecords = nk.storageList(userId, 'stats', 20);
-    if (matchRecords && matchRecords.objects) {
-      matchHistory = matchRecords.objects
-        .filter(function (obj: any) {
-          return obj.key.startsWith('match_');
-        })
-        .map(function (obj: any) {
-          const raw = obj.value;
-          return {
-            matchId: obj.key.replace('match_', ''),
-            result: String(raw.result),
-            reason: String(raw.reason),
-            opponent: String(raw.opponent),
-            timestamp: Number(raw.timestamp),
-          };
-        })
-        .sort(function (a: any, b: any) {
-          return b.timestamp - a.timestamp;
-        });
+    const [summaryRead, historyList] = [
+      nk.storageRead([{ collection: 'stats', key: 'summary', userId }]),
+      nk.storageList(userId, 'stats', 50),
+    ];
+
+    if (summaryRead && summaryRead.length > 0) {
+      summary = summaryRead[0].value as any;
+    }
+
+    if (historyList && historyList.objects) {
+      const records = historyList.objects.filter((obj) => obj.key.startsWith('match_h_'));
+      
+      // Fetch opponent names at runtime
+      const opponentIds = records.map((obj) => (obj.value as any).opponentId);
+      const uniqueOpponentIds = Array.from(new Set(opponentIds));
+      const opponentAccounts = uniqueOpponentIds.length > 0 ? nk.usersGetId(uniqueOpponentIds) : [];
+      const nameMap: { [key: string]: string } = {};
+      opponentAccounts.forEach((acc) => {
+        nameMap[acc.userId] = acc.displayName || acc.username || 'unknown';
+      });
+
+      matchHistory = records
+        .map((obj: any) => ({
+          matchId: obj.value.matchId,
+          result: obj.value.result,
+          opponent: nameMap[obj.value.opponentId] || 'unknown',
+          timestamp: obj.value.timestamp,
+        }))
+        .sort((a, b) => b.timestamp - a.timestamp);
     }
   } catch (e) {
-    logger.warn('could not fetch match history for %s', userId);
+    logger.warn('Could not fetch user stats for %s: %s', userId, e.message);
   }
 
   return { summary, matchHistory };
@@ -227,26 +234,32 @@ export function getMatchDetail(
   matchId: string
 ): any {
   try {
-    const records = nk.storageRead([
-      { collection: 'stats', key: 'match_' + matchId, userId: userId },
-    ]);
+    const records = nk.storageRead([{ collection: 'stats', key: 'match_detail_' + matchId, userId: null }]);
 
     if (!records || records.length === 0) {
-      return { error: 'match not found' };
+      return { error: 'match details not found' };
     }
 
-    const raw = records[0].value;
+    const data = records[0].value as any;
+    const isP1 = data.player1Id === userId;
+    const opponentId = isP1 ? data.player2Id : data.player1Id;
+
+    // Fetch current opponent name
+    const accounts = nk.usersGetId([opponentId]);
+    const opponentName = accounts.length > 0 ? (accounts[0].displayName || accounts[0].username) : 'unknown';
+
     return {
       matchId,
-      result: String(raw.result),
-      reason: String(raw.reason),
-      opponent: String(raw.opponent),
-      timestamp: Number(raw.timestamp),
-      moves: raw.moves || [],
-      finalBoard: raw.finalBoard || [],
+      result: isP1 ? data.player1Result : data.player2Result,
+      opponent: opponentName,
+      opponentId: opponentId,
+      timestamp: data.timestamp,
+      moves: data.moves || [],
+      finalBoard: data.finalBoard || [],
+      reason: data.reason || 'normal',
     };
   } catch (e) {
-    logger.error('getMatchDetail error: %s', JSON.stringify(e));
+    logger.error('getMatchDetail error: %s', e.message);
     return { error: 'failed to fetch match detail' };
   }
 }
