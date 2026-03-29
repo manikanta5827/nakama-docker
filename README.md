@@ -21,7 +21,7 @@ A production-ready, server-authoritative multiplayer Tic-Tac-Toe game built with
 ## Live URLs
 
 - **GitHub Repository**: [https://github.com/manikanta5827/nakama-docker](https://github.com/manikanta5827/nakama-docker)
-- **Frontend**: [https://nakama-docker-28ohfnz2x-manikantas-projects-05d5879c.vercel.app/](https://nakama-docker-28ohfnz2x-manikantas-projects-05d5879c.vercel.app/)
+- **Frontend**: [https://lila-game.chilaka.online/](https://lila-game.chilaka.online/)
 - **Backend (Nakama)**: [https://nakama.chilaka.online/](https://nakama.chilaka.online/)
 
 ## Screenshots

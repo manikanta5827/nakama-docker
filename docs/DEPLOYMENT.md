@@ -5,7 +5,7 @@ The application is deployed using a distributed architecture to ensure scalabili
 ## Deployed URLs
 
 - **GitHub Repository**: [https://github.com/manikanta5827/nakama-docker](https://github.com/manikanta5827/nakama-docker)
-- **Frontend (Vercel)**: [https://nakama-docker-28ohfnz2x-manikantas-projects-05d5879c.vercel.app/](https://nakama-docker-28ohfnz2x-manikantas-projects-05d5879c.vercel.app/)
+- **Frontend (Vercel)**: [https://lila-game.chilaka.online/](https://lila-game.chilaka.online/)
 - **Backend (Nakama on Railway)**: [https://nakama.chilaka.online/](https://nakama.chilaka.online/)
 
 ## Platform Decisions
