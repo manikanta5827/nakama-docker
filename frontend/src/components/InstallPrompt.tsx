@@ -71,9 +71,7 @@ export function InstallPrompt() {
             </div>
             <div>
               <p className="font-bold text-sm">Install TicTacToe</p>
-              <p className="text-xs text-muted-foreground">
-                Play anytime, even offline
-              </p>
+              <p className="text-xs text-muted-foreground">Play anytime</p>
             </div>
           </div>
           <button

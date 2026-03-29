@@ -28,7 +28,7 @@ To provide a competitive and educational experience:
 - **Implementation**: The frontend retrieves these move sequences via the `get_match_detail` RPC. Instead of just showing the final board, it uses a playback controller that iterates through the move array, rendering each symbol with a deliberate delay. This creates a "slow-motion" reconstruction of the entire match, allowing players to analyze their strategies.
 
 ## 7. Progressive Web App (PWA) Support
-To provide a native-like experience and offline resilience:
+To provide a native-like experience:
 - **Decision**: Implemented PWA using `vite-plugin-pwa` with custom caching strategies.
 - **Implementation**:
   - **Offline Resilience**: Static assets (JS, CSS, HTML, Icons) are cached using Workbox's `generateSW` strategy.

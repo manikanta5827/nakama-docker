@@ -2,6 +2,22 @@
 
 A production-ready, server-authoritative multiplayer Tic-Tac-Toe game built with **Nakama** and **React (TypeScript)**.
 
+## Live URLs
+
+- **GitHub Repository**: [https://github.com/manikanta5827/nakama-docker](https://github.com/manikanta5827/nakama-docker)
+- **Frontend**: [https://lila-game.chilaka.online/](https://lila-game.chilaka.online/)
+- **Backend (Nakama)**: [https://nakama.chilaka.online/](https://nakama.chilaka.online/)
+
+## Architecture
+
+```
+Client (React/Vercel)
+    ↓ WSS port 443
+Nakama Server (Railway)
+    ↓ PostgreSQL
+Railway Managed Database
+```
+
 ## Quick Links
 
 - **[RUN.md](./docs/RUN.md)**: Local development and setup instructions.
@@ -16,14 +32,8 @@ A production-ready, server-authoritative multiplayer Tic-Tac-Toe game built with
 - **Turn-Based Timeout**: 30-second move limit enforced by the backend.
 - **Global Leaderboard**: Track player wins and compete globally.
 - **Match History & Replays**: Review past games with a slow-motion playback of every move.
-- **PWA Support**: Installable on mobile and desktop with offline resilience and native feel.
+- **PWA Support**: Installable on mobile and desktop with native feel.
 - **Mobile-Friendly UI**: Responsive design for a seamless mobile and desktop experience.
-
-## Live URLs
-
-- **GitHub Repository**: [https://github.com/manikanta5827/nakama-docker](https://github.com/manikanta5827/nakama-docker)
-- **Frontend**: [https://lila-game.chilaka.online/](https://lila-game.chilaka.online/)
-- **Backend (Nakama)**: [https://nakama.chilaka.online/](https://nakama.chilaka.online/)
 
 ## Screenshots
 
