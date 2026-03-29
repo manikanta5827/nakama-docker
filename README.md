@@ -16,6 +16,7 @@ A production-ready, server-authoritative multiplayer Tic-Tac-Toe game built with
 - **Turn-Based Timeout**: 30-second move limit enforced by the backend.
 - **Global Leaderboard**: Track player wins and compete globally.
 - **Match History & Replays**: Review past games with a slow-motion playback of every move.
+- **PWA Support**: Installable on mobile and desktop with offline resilience and native feel.
 - **Mobile-Friendly UI**: Responsive design for a seamless mobile and desktop experience.
 
 ## Live URLs

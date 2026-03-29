@@ -37,3 +37,11 @@ VITE_NAKAMA_HOST=localhost
 VITE_NAKAMA_PORT=7350
 VITE_NAKAMA_SSL=false
 ```
+
+## 4. Testing PWA Locally
+
+The Progressive Web App (PWA) features can be tested in your local development environment:
+
+1. **Install Prompt**: The custom "Add to Home Screen" prompt will appear after the first few interactions if the browser conditions are met.
+2. **Offline Mode**: You can simulate offline mode using Chrome DevTools (Network tab -> Throttling -> Offline). Due to Workbox caching, the UI and recent match history (via Nakama API cache) will still be accessible.
+3. **Standalone Mode**: To test the standalone look, use your browser's "Install" option (usually in the address bar or menu).
